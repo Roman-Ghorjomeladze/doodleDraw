@@ -1,0 +1,115 @@
+export type GameMode = 'classic' | 'team';
+
+export type GamePhase =
+  | 'lobby'
+  | 'selecting_word'
+  | 'drawing'
+  | 'round_end'
+  | 'game_end';
+
+export type Team = 'A' | 'B';
+
+export interface Player {
+  id: string;
+  nickname: string;
+  avatar: string;
+  score: number;
+  team?: Team;
+  isDrawing: boolean;
+  hasDrawn: boolean;
+  isHost: boolean;
+  isConnected: boolean;
+  isSpectator?: boolean;
+}
+
+export interface RoomSettings {
+  maxPlayers: number;
+  roundTime: number;
+  language: string;
+  difficulty: 1 | 2 | 3;
+  totalRounds: number;
+  hintsEnabled: boolean;
+  redrawEnabled: boolean;
+  teamAName: string;
+  teamBName: string;
+}
+
+export interface Room {
+  id: string;
+  mode: GameMode;
+  phase: GamePhase;
+  settings: RoomSettings;
+  players: Map<string, Player>;
+  currentRound: number;
+  currentWord: string | null;
+  wordHint: string;
+  drawerId: string | null;
+  teamADrawerId: string | null;
+  teamBDrawerId: string | null;
+  roundStartTime: number | null;
+  correctGuessers: string[];
+  drawingHistory: DrawAction[];
+  pendingWords: { word: string; difficulty: number }[];
+  drawOrder: string[];
+  drawOrderIndex: number;
+  teamAScore: number;
+  teamBScore: number;
+  lastWinningTeam: Team | null;
+  isRedrawRound: boolean;
+  playerWordHistory: Map<string, string[]>;
+  chatHistory: ChatMessage[];
+}
+
+export interface SerializedRoom {
+  id: string;
+  mode: GameMode;
+  phase: GamePhase;
+  settings: RoomSettings;
+  players: Player[];
+  currentRound: number;
+  wordHint: string;
+  drawerId: string | null;
+  teamADrawerId: string | null;
+  teamBDrawerId: string | null;
+  correctGuessers: string[];
+  drawOrderIndex: number;
+  teamAScore: number;
+  teamBScore: number;
+  isRedrawRound: boolean;
+}
+
+export interface DrawAction {
+  type: 'stroke' | 'fill' | 'clear' | 'undo';
+  points?: { x: number; y: number }[];
+  color?: string;
+  brushSize?: number;
+  tool?: 'pen' | 'eraser' | 'fill';
+  timestamp: number;
+  playerId: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  playerId: string;
+  nickname: string;
+  text: string;
+  timestamp: number;
+  isCorrectGuess: boolean;
+  isSystemMessage: boolean;
+  isCloseGuess: boolean;
+}
+
+export interface GameScore {
+  playerId: string;
+  nickname: string;
+  score: number;
+  team?: Team;
+  correctGuesses: number;
+  drawingScore: number;
+}
+
+export interface Handicap {
+  limitedColors: boolean;
+  minBrushSize: number;
+  availableColors: string[];
+}

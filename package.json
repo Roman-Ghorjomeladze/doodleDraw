@@ -1,0 +1,24 @@
+{
+  "name": "doodledraw",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:server": "pnpm --filter @doodledraw/server run dev",
+    "dev:web": "pnpm --filter @doodledraw/web run dev",
+    "build": "pnpm -r run build",
+    "start:prod": "NODE_ENV=production node apps/server/dist/main.js",
+    "db:migrate": "pnpm --filter @doodledraw/server run db:migrate",
+    "db:seed": "pnpm --filter @doodledraw/server run db:seed"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "@nestjs/core"
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+
+  --color-accent-300: #fdba74;
+  --color-accent-400: #fb923c;
+  --color-accent-500: #f97316;
+  --color-accent-600: #ea580c;
+
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  --color-warning-400: #facc15;
+  --color-warning-500: #eab308;
+
+  --color-surface-50: #fafafa;
+  --color-surface-100: #f5f5f5;
+  --color-surface-200: #e5e5e5;
+  --color-surface-300: #d4d4d4;
+  --color-surface-400: #a3a3a3;
+  --color-surface-500: #737373;
+  --color-surface-600: #525252;
+  --color-surface-700: #404040;
+  --color-surface-800: #262626;
+  --color-surface-900: #171717;
+  --color-surface-950: #0a0a0a;
+
+  --color-team-a: #3b82f6;
+  --color-team-b: #f97316;
+
+  --font-sans: 'Noto Sans', 'Noto Sans Georgian', system-ui, sans-serif;
+  --font-serif: 'Noto Serif', 'Noto Serif Georgian', Georgia, serif;
+  --font-display: 'FiraGO', 'Noto Sans Georgian', system-ui, sans-serif;
+
+  --radius-game: 1rem;
+  --radius-button: 0.75rem;
+  --radius-card: 1.25rem;
+
+  --shadow-game: 0 4px 14px -3px rgba(0, 0, 0, 0.1), 0 2px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-game-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 10px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Font family switching */
+[data-font-family="sans"] { font-family: var(--font-sans); }
+[data-font-family="serif"] { font-family: var(--font-serif); }
+[data-font-family="display"] { font-family: var(--font-display); }
+
+/* Font size switching */
+[data-font-size="standard"] { font-size: 16px; }
+[data-font-size="medium"] { font-size: 18px; }
+[data-font-size="large"] { font-size: 20px; }
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+.dark ::selection {
+  background: var(--color-primary-700);
+  color: var(--color-primary-100);
+}
