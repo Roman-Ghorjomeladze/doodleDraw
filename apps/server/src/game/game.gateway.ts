@@ -484,9 +484,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       }
 
       const player = room.players.get(data.playerId);
-      if (!player || player.isConnected) {
+      if (!player) {
         client.emit('room:error', { message: 'Cannot reconnect' });
         return;
+      }
+
+      // If the old socket is still marked as connected (race condition during
+      // transport upgrade), force-mark as disconnected so reconnection can proceed.
+      if (player.isConnected) {
+        player.isConnected = false;
+        this.logger.warn(`Force-disconnecting stale socket ${data.playerId} for reconnection`);
       }
 
       // Prevent socket from being in multiple rooms.
