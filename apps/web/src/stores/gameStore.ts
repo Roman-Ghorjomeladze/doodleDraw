@@ -30,6 +30,8 @@ interface GameState {
   teamAScore: number;
   teamBScore: number;
   isRedrawRound: boolean;
+  countdownSeconds: number | null;
+  pendingRoomId: string | null;
 }
 
 interface GameActions {
@@ -61,6 +63,8 @@ interface GameActions {
   setScores: (scores: GameScore[]) => void;
   setCurrentWord: (word: string | null) => void;
   setSettings: (settings: RoomSettings) => void;
+  setCountdownSeconds: (seconds: number | null) => void;
+  setPendingRoomId: (roomId: string | null) => void;
   reset: () => void;
 }
 
@@ -88,6 +92,8 @@ const initialState: GameState = {
   teamAScore: 0,
   teamBScore: 0,
   isRedrawRound: false,
+  countdownSeconds: null,
+  pendingRoomId: null,
 };
 
 export const useGameStore = create<GameStore>()((set) => ({
@@ -151,6 +157,10 @@ export const useGameStore = create<GameStore>()((set) => ({
   setCurrentWord: (currentWord) => set({ currentWord }),
 
   setSettings: (settings) => set({ settings }),
+
+  setCountdownSeconds: (countdownSeconds) => set({ countdownSeconds }),
+
+  setPendingRoomId: (pendingRoomId) => set({ pendingRoomId }),
 
   reset: () => {
     sessionStorage.removeItem('doodledraw_roomId');

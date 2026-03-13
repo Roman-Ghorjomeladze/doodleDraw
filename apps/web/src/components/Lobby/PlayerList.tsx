@@ -63,6 +63,9 @@ function PlayerGroup({ players, showScores }: { players: Player[]; showScores: b
                 {player.isSpectator && (
                   <span className="text-[10px] px-1 py-0.5 rounded bg-surface-200 dark:bg-surface-600 text-surface-500 dark:text-surface-400">{t('spectator.badge')}</span>
                 )}
+                {!player.isConnected && (
+                  <span className="text-[10px] px-1 py-0.5 rounded bg-warning-100 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400">{t('connection.disconnected')}</span>
+                )}
               </div>
             </div>
             {showScores && (

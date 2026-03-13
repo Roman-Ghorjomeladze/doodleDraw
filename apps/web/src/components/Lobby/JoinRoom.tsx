@@ -2,15 +2,39 @@ import { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useGame } from '@/hooks/useGame';
 import { usePlayerStore } from '@/stores/playerStore';
+import { useGameStore } from '@/stores/gameStore';
 import { useTranslation } from '@/i18n';
 import { AVATAR_SEEDS, PERSON_AVATAR_SEEDS, ROOM_CODE_LENGTH } from '@doodledraw/shared';
 import Avatar from '@/components/Avatar';
+
+/** Extract room code from URL synchronously at component init. */
+function getRoomCodeFromUrl(): string[] {
+  const match = window.location.pathname.match(/^\/game\/([A-Z0-9]{4,8})$/i);
+  if (match) {
+    const chars = match[1].toUpperCase().split('').slice(0, ROOM_CODE_LENGTH);
+    // Pad with empty strings if shorter than ROOM_CODE_LENGTH
+    while (chars.length < ROOM_CODE_LENGTH) chars.push('');
+    // Clear pendingRoomId since we consumed it
+    useGameStore.getState().setPendingRoomId(null);
+    return chars;
+  }
+  // Also check store's pendingRoomId (for popstate navigation).
+  const pending = useGameStore.getState().pendingRoomId;
+  if (pending) {
+    const chars = pending.toUpperCase().split('').slice(0, ROOM_CODE_LENGTH);
+    while (chars.length < ROOM_CODE_LENGTH) chars.push('');
+    useGameStore.getState().setPendingRoomId(null);
+    return chars;
+  }
+  return Array(ROOM_CODE_LENGTH).fill('');
+}
 
 export default function JoinRoom() {
   const { nickname, avatar, setNickname, setAvatar } = usePlayerStore();
   const { joinRoom, spectateRoom } = useGame();
   const { t } = useTranslation();
-  const [code, setCode] = useState<string[]>(Array(ROOM_CODE_LENGTH).fill(''));
+
+  const [code, setCode] = useState<string[]>(() => getRoomCodeFromUrl());
   const [showMore, setShowMore] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 

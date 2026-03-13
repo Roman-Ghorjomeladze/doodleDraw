@@ -32,7 +32,11 @@ export function useGame() {
   );
 
   const startGame = useCallback(() => {
-    emit('game:start');
+    emit('game:startCountdown');
+  }, [emit]);
+
+  const cancelStartGame = useCallback(() => {
+    emit('game:cancelCountdown');
   }, [emit]);
 
   const selectWord = useCallback(
@@ -88,6 +92,7 @@ export function useGame() {
     createRoom,
     joinRoom,
     startGame,
+    cancelStartGame,
     selectWord,
     sendGuess,
     leaveRoom,

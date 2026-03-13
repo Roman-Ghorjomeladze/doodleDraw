@@ -1,37 +1,80 @@
 import { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
 import { useGame } from '@/hooks/useGame';
 import { useTranslation } from '@/i18n';
 import PlayerList from './PlayerList';
 import GuessingChat from '@/components/Game/GuessingChat';
+import ConfirmModal from '@/components/UI/ConfirmModal';
 import { DEFAULT_ROOM_SETTINGS, MIN_PLAYERS_CLASSIC, MIN_PLAYERS_TEAM } from '@doodledraw/shared';
 
 export default function RoomLobby() {
-  const { roomId, mode, players, isHost, settings } = useGameStore();
-  const { startGame, leaveRoom, updateSettings } = useGame();
+  const { roomId, mode, players, isHost, settings, countdownSeconds } = useGameStore();
+  const { startGame, cancelStartGame, leaveRoom, updateSettings } = useGame();
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const minPlayers = mode === 'team' ? MIN_PLAYERS_TEAM : MIN_PLAYERS_CLASSIC;
   const canStart = players.length >= minPlayers;
 
   const currentSettings = settings || DEFAULT_ROOM_SETTINGS;
 
+  const isCountingDown = countdownSeconds !== null && countdownSeconds > 0;
+
   return (
     <div className="max-w-2xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-surface-800 rounded-card shadow-game-lg p-6"
+        className="bg-white dark:bg-surface-800 rounded-card shadow-game-lg p-6 relative overflow-hidden"
       >
+        {/* Countdown Overlay */}
+        <AnimatePresence>
+          {isCountingDown && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center"
+            >
+              <p className="text-white/70 text-lg font-medium mb-2">
+                {t('lobby.starting')}
+              </p>
+              <motion.div
+                key={countdownSeconds}
+                initial={{ scale: 2, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.5, opacity: 0 }}
+                transition={{ type: 'spring', duration: 0.4 }}
+                className="text-8xl font-black text-white drop-shadow-lg"
+              >
+                {countdownSeconds}
+              </motion.div>
+              {isHost && (
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={cancelStartGame}
+                  className="mt-6 px-6 py-2 rounded-button bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors"
+                >
+                  {t('lobby.cancelStart')}
+                </motion.button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Room Info */}
         <div className="text-center mb-6">
           <p className="text-sm text-surface-500 mb-1">{t('lobby.roomCode')}</p>
           <button
             onClick={() => {
               if (!roomId) return;
-              navigator.clipboard.writeText(roomId);
+              const url = `${window.location.origin}/game/${roomId}`;
+              navigator.clipboard.writeText(url);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
@@ -173,7 +216,7 @@ export default function RoomLobby() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={leaveRoom}
+            onClick={() => setShowLeaveConfirm(true)}
             className="px-6 py-3 rounded-button bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 font-semibold transition-all"
           >
             {t('lobby.leave')}
@@ -191,6 +234,24 @@ export default function RoomLobby() {
           )}
         </div>
       </motion.div>
+
+      {/* Leave Confirmation Modal */}
+      <AnimatePresence>
+        {showLeaveConfirm && (
+          <ConfirmModal
+            title={t('lobby.leaveConfirmTitle')}
+            message={t('lobby.leaveConfirmMessage')}
+            confirmLabel={t('lobby.confirmLeave')}
+            cancelLabel={t('lobby.cancel')}
+            variant="danger"
+            onConfirm={() => {
+              setShowLeaveConfirm(false);
+              leaveRoom();
+            }}
+            onCancel={() => setShowLeaveConfirm(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

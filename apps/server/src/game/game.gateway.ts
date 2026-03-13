@@ -329,6 +329,56 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
   }
 
+  @SubscribeMessage('game:startCountdown')
+  async handleStartCountdown(
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    if (this.throttle(client, 'game:startCountdown')) return;
+
+    try {
+      const room = this.roomService.getRoomForPlayer(client.id);
+      if (!room) {
+        client.emit('room:error', { message: 'Not in a room' });
+        return;
+      }
+
+      const player = room.players.get(client.id);
+      if (!player?.isHost) {
+        client.emit('room:error', { message: 'Only the host can start the game' });
+        return;
+      }
+
+      this.gameService.startCountdown(room.id, this.server);
+    } catch (err: any) {
+      client.emit('room:error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('game:cancelCountdown')
+  handleCancelCountdown(
+    @ConnectedSocket() client: Socket,
+  ): void {
+    if (this.throttle(client, 'game:cancelCountdown')) return;
+
+    try {
+      const room = this.roomService.getRoomForPlayer(client.id);
+      if (!room) {
+        client.emit('room:error', { message: 'Not in a room' });
+        return;
+      }
+
+      const player = room.players.get(client.id);
+      if (!player?.isHost) {
+        client.emit('room:error', { message: 'Only the host can cancel the countdown' });
+        return;
+      }
+
+      this.gameService.cancelCountdown(room.id, this.server);
+    } catch (err: any) {
+      client.emit('room:error', { message: err.message });
+    }
+  }
+
   @SubscribeMessage('game:selectWord')
   async handleSelectWord(
     @ConnectedSocket() client: Socket,

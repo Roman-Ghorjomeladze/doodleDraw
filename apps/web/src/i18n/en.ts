@@ -45,6 +45,12 @@ export const en = {
   'lobby.teamBName': 'Team B Name',
   'lobby.redrawRound': 'Redraw Round',
   'lobby.redrawRoundDesc': 'After all rounds, redraw previous words',
+  'lobby.leaveConfirmTitle': 'Leave Room?',
+  'lobby.leaveConfirmMessage': 'Are you sure you want to leave this room?',
+  'lobby.confirmLeave': 'Leave',
+  'lobby.cancel': 'Cancel',
+  'lobby.starting': 'Starting in...',
+  'lobby.cancelStart': 'Cancel',
 
   // Player List
   'player.host': 'Host',
@@ -126,6 +132,15 @@ export const en = {
   'rules.spectator.desc': 'Join any ongoing game as a spectator! Watch both teams draw, follow the chat, but you cannot guess or earn points.',
   'rules.settings.title': 'Room Settings',
   'rules.settings.desc': 'The host can adjust round time, number of rounds, difficulty, word language, and enable a bonus redraw round where players redraw previous words.',
+
+  // Connection
+  'connection.lost': 'Connection lost',
+  'connection.reconnecting': 'Reconnecting... (attempt {{attempt}})',
+  'connection.failed': 'Reconnection failed',
+  'connection.reconnect': 'Reconnect',
+  'connection.disconnected': 'Offline',
+  'connection.playerDisconnected': '{{name}} lost connection',
+  'connection.playerReconnected': '{{name}} reconnected',
 
   // Theme
   'theme.switchToLight': 'Switch to light mode',

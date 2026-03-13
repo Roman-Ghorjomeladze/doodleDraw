@@ -16,6 +16,8 @@ export interface ClientToServerEvents {
   'room:leave': () => void;
   'room:settings': (data: Partial<RoomSettings>) => void;
   'game:start': () => void;
+  'game:startCountdown': () => void;
+  'game:cancelCountdown': () => void;
   'game:selectWord': (data: { wordIndex: number }) => void;
   'draw:action': (data: DrawAction) => void;
   'draw:clear': () => void;
@@ -45,6 +47,8 @@ export interface ServerToClientEvents {
   'game:roundEnd': (data: { word: string; scores: GameScore[] }) => void;
   'game:end': (data: { finalScores: GameScore[]; winner: string | Team }) => void;
   'game:timerUpdate': (data: { timeLeft: number }) => void;
+  'game:countdownTick': (data: { seconds: number }) => void;
+  'game:countdownCancelled': () => void;
   'game:hintReveal': (data: { hint: string }) => void;
   'draw:action': (data: DrawAction) => void;
   'draw:actionBlurred': (data: DrawAction) => void;

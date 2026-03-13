@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useGameEvents } from '@/hooks/useGameEvents';
+import { useUrlSync } from '@/hooks/useUrlSync';
 import HomePage from '@/components/Lobby/HomePage';
 import RoomLobby from '@/components/Lobby/RoomLobby';
 import GameRoom from '@/components/Game/GameRoom';
 import Header from '@/components/Layout/Header';
+import ConnectionStatus from '@/components/UI/ConnectionStatus';
 import AdminPanel from '@/components/Admin/AdminPanel';
 
 export default function App() {
@@ -15,6 +17,9 @@ export default function App() {
 
   // Register socket event listeners once at the top level
   useGameEvents();
+
+  // Sync URL with game room state
+  useUrlSync();
 
   useEffect(() => {
     const onHashChange = () => setIsAdmin(window.location.hash === '#admin');
@@ -35,6 +40,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-50 transition-colors duration-300">
       <Header />
+      <ConnectionStatus />
       <main className="container mx-auto px-4 py-6">
         {!roomId && <HomePage />}
         {roomId && phase === 'lobby' && <RoomLobby />}

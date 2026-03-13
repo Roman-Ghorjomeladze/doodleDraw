@@ -47,6 +47,12 @@ export const tr: Translations = {
   'lobby.teamBName': 'Takım B Adı',
   'lobby.redrawRound': 'Yeniden Çizim Turu',
   'lobby.redrawRoundDesc': 'Tüm turlardan sonra önceki kelimeleri tekrar çizin',
+  'lobby.leaveConfirmTitle': 'Odadan Ayrıl?',
+  'lobby.leaveConfirmMessage': 'Bu odadan ayrılmak istediğinizden emin misiniz?',
+  'lobby.confirmLeave': 'Ayrıl',
+  'lobby.cancel': 'İptal',
+  'lobby.starting': 'Başlıyor...',
+  'lobby.cancelStart': 'İptal',
 
   // Player List
   'player.host': 'Ev Sahibi',
@@ -128,6 +134,15 @@ export const tr: Translations = {
   'rules.spectator.desc': 'Devam eden herhangi bir oyuna izleyici olarak katılın! Her iki takımın çizimini izleyin, sohbeti takip edin, ancak tahmin edemez ve puan kazanamazsınız.',
   'rules.settings.title': 'Oda Ayarları',
   'rules.settings.desc': 'Ev sahibi tur süresini, tur sayısını, zorluğu, kelime dilini ayarlayabilir ve önceki kelimelerin tekrar çizildiği bonus turu etkinleştirebilir.',
+
+  // Connection
+  'connection.lost': 'Bağlantı kesildi',
+  'connection.reconnecting': 'Yeniden bağlanıyor... (deneme {{attempt}})',
+  'connection.failed': 'Yeniden bağlanma başarısız',
+  'connection.reconnect': 'Yeniden Bağlan',
+  'connection.disconnected': 'Çevrimdışı',
+  'connection.playerDisconnected': '{{name}} bağlantısı kesildi',
+  'connection.playerReconnected': '{{name}} yeniden bağlandı',
 
   // Theme
   'theme.switchToLight': 'Açık moda geç',

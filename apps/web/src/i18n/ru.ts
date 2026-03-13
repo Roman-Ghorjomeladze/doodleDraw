@@ -47,6 +47,12 @@ export const ru: Translations = {
   'lobby.teamBName': 'Название команды B',
   'lobby.redrawRound': 'Раунд перерисовки',
   'lobby.redrawRoundDesc': 'После всех раундов перерисуйте предыдущие слова',
+  'lobby.leaveConfirmTitle': 'Выйти из комнаты?',
+  'lobby.leaveConfirmMessage': 'Вы уверены, что хотите покинуть эту комнату?',
+  'lobby.confirmLeave': 'Выйти',
+  'lobby.cancel': 'Отмена',
+  'lobby.starting': 'Начинаем через...',
+  'lobby.cancelStart': 'Отмена',
 
   // Player List
   'player.host': 'Хост',
@@ -128,6 +134,15 @@ export const ru: Translations = {
   'rules.spectator.desc': 'Присоединяйтесь к любой игре как наблюдатель! Смотрите за обеими командами, следите за чатом, но не можете угадывать и получать очки.',
   'rules.settings.title': 'Настройки комнаты',
   'rules.settings.desc': 'Хост может настроить время раунда, количество раундов, сложность, язык слов и включить бонусный раунд перерисовки.',
+
+  // Connection
+  'connection.lost': 'Соединение потеряно',
+  'connection.reconnecting': 'Переподключение... (попытка {{attempt}})',
+  'connection.failed': 'Не удалось переподключиться',
+  'connection.reconnect': 'Переподключиться',
+  'connection.disconnected': 'Не в сети',
+  'connection.playerDisconnected': '{{name}} потерял(а) соединение',
+  'connection.playerReconnected': '{{name}} переподключился(ась)',
 
   // Theme
   'theme.switchToLight': 'Переключить на светлый режим',

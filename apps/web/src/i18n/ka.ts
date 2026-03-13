@@ -47,6 +47,12 @@ export const ka: Translations = {
 	'lobby.teamBName': 'გუნდი B-ს სახელი',
 	'lobby.redrawRound': 'ხელახალი ხატვის რაუნდი',
 	'lobby.redrawRoundDesc': 'ყველა რაუნდის შემდეგ, ხელახლა დახატეთ წინა სიტყვები',
+	'lobby.leaveConfirmTitle': 'ოთახიდან გასვლა?',
+	'lobby.leaveConfirmMessage': 'ნამდვილად გსურთ ოთახიდან გასვლა?',
+	'lobby.confirmLeave': 'გასვლა',
+	'lobby.cancel': 'გაუქმება',
+	'lobby.starting': 'იწყება...',
+	'lobby.cancelStart': 'გაუქმება',
 
 	// Player List
 	'player.host': 'მასპინძელი',
@@ -128,6 +134,15 @@ export const ka: Translations = {
 	'rules.spectator.desc': 'შეუერთდით ნებისმიერ მიმდინარე თამაშს მაყურებლის სახით! უყურეთ ორივე გუნდის ხატვას, თვალყური ადევნეთ ჩატს, მაგრამ ვერ გამოიცნობთ და ვერ მიიღებთ ქულებს.',
 	'rules.settings.title': 'ოთახის პარამეტრები',
 	'rules.settings.desc': 'მასპინძელს შეუძლია შეცვალოს რაუნდის დრო, რაუნდების რაოდენობა, სირთულე, სიტყვების ენა და ჩართოს ბონუს ხელახალი ხატვის რაუნდი.',
+
+	// Connection
+	'connection.lost': 'კავშირი გაწყდა',
+	'connection.reconnecting': 'ხელახალი დაკავშირება... (მცდელობა {{attempt}})',
+	'connection.failed': 'ხელახალი დაკავშირება ვერ მოხერხდა',
+	'connection.reconnect': 'ხელახლა დაკავშირება',
+	'connection.disconnected': 'გათიშული',
+	'connection.playerDisconnected': '{{name}} გათიშულია',
+	'connection.playerReconnected': '{{name}} ხელახლა დაუკავშირდა',
 
 	// Theme
 	'theme.switchToLight': 'ღია რეჟიმზე გადართვა',

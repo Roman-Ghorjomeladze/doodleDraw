@@ -8,8 +8,13 @@ import RulesModal from '@/components/RulesModal';
 
 type Tab = 'create' | 'join';
 
+/** Check synchronously if URL contains a room code. */
+function hasRoomCodeInUrl(): boolean {
+  return /^\/game\/[A-Z0-9]{4,8}$/i.test(window.location.pathname);
+}
+
 export default function HomePage() {
-  const [tab, setTab] = useState<Tab>('create');
+  const [tab, setTab] = useState<Tab>(() => hasRoomCodeInUrl() ? 'join' : 'create');
   const [showRules, setShowRules] = useState(false);
   const { t } = useTranslation();
 

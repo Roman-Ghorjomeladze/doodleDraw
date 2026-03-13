@@ -35,6 +35,9 @@ export class GameService {
   /** Active hint reveal timers keyed by room id. */
   private readonly hintTimers: Map<string, NodeJS.Timeout> = new Map();
 
+  /** Active start-game countdown timers keyed by room id. */
+  private readonly startCountdownTimers: Map<string, NodeJS.Timeout> = new Map();
+
   constructor(
     private readonly roomService: RoomService,
     private readonly classicMode: ClassicModeService,
@@ -72,6 +75,72 @@ export class GameService {
 
     // Start the first turn.
     await this.nextTurn(room, server);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Start countdown (3…2…1 before game starts)
+  // ---------------------------------------------------------------------------
+
+  startCountdown(roomId: string, server: Server): void {
+    const room = this.roomService.getRoom(roomId);
+    if (!room) throw new Error('Room not found');
+
+    if (room.phase !== 'lobby') throw new Error('Game already started');
+
+    // Validate minimum players.
+    const connectedCount = Array.from(room.players.values()).filter(
+      (p) => p.isConnected && !p.isSpectator,
+    ).length;
+    const minPlayers =
+      room.mode === 'classic' ? MIN_PLAYERS_CLASSIC : MIN_PLAYERS_TEAM;
+    if (connectedCount < minPlayers) {
+      throw new Error(`Need at least ${minPlayers} players to start`);
+    }
+
+    // Prevent double countdown.
+    if (this.startCountdownTimers.has(roomId)) {
+      return;
+    }
+
+    let seconds = 3;
+
+    // Emit the first tick immediately.
+    server.to(roomId).emit('game:countdownTick', { seconds });
+
+    const timer = setInterval(async () => {
+      seconds--;
+      if (seconds <= 0) {
+        // Countdown finished — start the game.
+        this.clearStartCountdown(roomId);
+        server.to(roomId).emit('game:countdownTick', { seconds: 0 });
+        try {
+          await this.startGame(roomId, server);
+        } catch (err: any) {
+          this.logger.error(`Failed to start game after countdown: ${err.message}`);
+        }
+      } else {
+        server.to(roomId).emit('game:countdownTick', { seconds });
+      }
+    }, TIMER_INTERVAL_MS);
+
+    this.startCountdownTimers.set(roomId, timer);
+    this.logger.log(`Start countdown initiated for room ${roomId}`);
+  }
+
+  cancelCountdown(roomId: string, server: Server): void {
+    if (!this.startCountdownTimers.has(roomId)) return;
+
+    this.clearStartCountdown(roomId);
+    server.to(roomId).emit('game:countdownCancelled');
+    this.logger.log(`Start countdown cancelled for room ${roomId}`);
+  }
+
+  private clearStartCountdown(roomId: string): void {
+    const timer = this.startCountdownTimers.get(roomId);
+    if (timer) {
+      clearInterval(timer);
+      this.startCountdownTimers.delete(roomId);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -780,5 +849,6 @@ export class GameService {
   cleanupRoom(roomId: string): void {
     this.clearRoundTimer(roomId);
     this.clearHintTimer(roomId);
+    this.clearStartCountdown(roomId);
   }
 }

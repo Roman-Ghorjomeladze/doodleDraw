@@ -64,6 +64,41 @@ export function useGameEvents() {
     unsubscribers.push(
       on('room:updated', ({ room }) => {
         const state = useGameStore.getState();
+        const currentPlayerId = usePlayerStore.getState().playerId;
+
+        // Detect connection state changes for other players
+        const prevPlayers = state.players;
+        for (const newPlayer of room.players) {
+          // Skip self
+          if (newPlayer.id === currentPlayerId) continue;
+          const prev = prevPlayers.find((p) => p.nickname === newPlayer.nickname);
+          if (prev && prev.isConnected && !newPlayer.isConnected) {
+            // Player just disconnected
+            state.addMessage({
+              id: `disconnect-${Date.now()}-${newPlayer.id}`,
+              playerId: newPlayer.id,
+              nickname: newPlayer.nickname,
+              text: translate('connection.playerDisconnected', { name: newPlayer.nickname }),
+              timestamp: Date.now(),
+              isCorrectGuess: false,
+              isSystemMessage: true,
+              isCloseGuess: false,
+            });
+          } else if (prev && !prev.isConnected && newPlayer.isConnected) {
+            // Player just reconnected
+            state.addMessage({
+              id: `reconnect-${Date.now()}-${newPlayer.id}`,
+              playerId: newPlayer.id,
+              nickname: newPlayer.nickname,
+              text: translate('connection.playerReconnected', { name: newPlayer.nickname }),
+              timestamp: Date.now(),
+              isCorrectGuess: false,
+              isSystemMessage: true,
+              isCloseGuess: false,
+            });
+          }
+        }
+
         useGameStore.getState().setRoom({
           roomId: room.id,
           mode: room.mode,
@@ -79,7 +114,6 @@ export function useGameEvents() {
           teamBScore: room.teamBScore,
           isRedrawRound: room.isRedrawRound,
         });
-        const currentPlayerId = usePlayerStore.getState().playerId;
         const isHost = room.players.find((p) => p.id === currentPlayerId)?.isHost ?? state.isHost;
         useGameStore.setState({ isHost, settings: room.settings });
       }),
@@ -106,6 +140,8 @@ export function useGameEvents() {
     unsubscribers.push(
       on('game:phaseChange', ({ phase }) => {
         useGameStore.getState().setPhase(phase);
+        // Clear countdown when game starts
+        useGameStore.getState().setCountdownSeconds(null);
 
         if (phase === 'lobby') {
           useDrawingStore.getState().reset();
@@ -161,6 +197,18 @@ export function useGameEvents() {
         if (timeLeft <= 5 && timeLeft > 0) {
           playSound('tick');
         }
+      }),
+    );
+
+    unsubscribers.push(
+      on('game:countdownTick', ({ seconds }) => {
+        useGameStore.getState().setCountdownSeconds(seconds);
+      }),
+    );
+
+    unsubscribers.push(
+      on('game:countdownCancelled', () => {
+        useGameStore.getState().setCountdownSeconds(null);
       }),
     );
 
