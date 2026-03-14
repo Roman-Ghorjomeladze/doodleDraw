@@ -144,6 +144,11 @@ export const tr: Translations = {
   'connection.playerDisconnected': '{{name}} bağlantısı kesildi',
   'connection.playerReconnected': '{{name}} yeniden bağlandı',
 
+  // Player left
+  'game.playerLeft': '{{name}} oyundan ayrıldı',
+  'game.returnedToLobby': 'Oyun iptal edildi. Lobiye dönülüyor.',
+  'game.playerLeftOk': 'OK',
+
   // Theme
   'theme.switchToLight': 'Açık moda geç',
   'theme.switchToDark': 'Koyu moda geç',

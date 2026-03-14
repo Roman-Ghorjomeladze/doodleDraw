@@ -144,6 +144,11 @@ export const ru: Translations = {
   'connection.playerDisconnected': '{{name}} потерял(а) соединение',
   'connection.playerReconnected': '{{name}} переподключился(ась)',
 
+  // Player left
+  'game.playerLeft': '{{name}} покинул(а) игру',
+  'game.returnedToLobby': 'Игра отменена. Возврат в лобби.',
+  'game.playerLeftOk': 'OK',
+
   // Theme
   'theme.switchToLight': 'Переключить на светлый режим',
   'theme.switchToDark': 'Переключить на тёмный режим',

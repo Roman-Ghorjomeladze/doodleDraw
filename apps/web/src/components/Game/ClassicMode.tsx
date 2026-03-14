@@ -12,6 +12,7 @@ import Timer from './Timer';
 import WordDisplay from './WordDisplay';
 import ScoreBoard from './ScoreBoard';
 import PlayerList from '@/components/Lobby/PlayerList';
+import GameLeaveButton from '@/components/UI/GameLeaveButton';
 
 function MobileChatInput({ onExpand }: { onExpand: () => void }) {
   const { sendGuess } = useGame();
@@ -71,7 +72,7 @@ export default function ClassicMode() {
     <div className="max-w-7xl mx-auto">
       {/* Word Selection Modal */}
       <AnimatePresence>
-        {phase === 'selecting_word' && isDrawer && wordOptions && (
+        {phase === 'selecting_word' && isDrawer && wordOptions.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -116,6 +117,9 @@ export default function ClassicMode() {
           >
             {t('game.choosingWord', { name: players.find(p => p.id === drawerId)?.nickname || '' })}
           </motion.div>
+          <div className="mt-6">
+            <GameLeaveButton />
+          </div>
         </div>
       )}
 

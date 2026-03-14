@@ -34,7 +34,7 @@ export interface ServerToClientEvents {
   'room:joined': (data: { room: SerializedRoom; playerId: string }) => void;
   'room:updated': (data: { room: SerializedRoom }) => void;
   'room:playerJoined': (data: { player: import('./game-types').Player }) => void;
-  'room:playerLeft': (data: { playerId: string }) => void;
+  'room:playerLeft': (data: { playerId: string; nickname: string; wasInGame: boolean }) => void;
   'room:error': (data: { message: string }) => void;
   'game:phaseChange': (data: { phase: GamePhase; context?: Record<string, unknown> }) => void;
   'game:wordOptions': (data: { words: { word: string; difficulty: number }[] }) => void;

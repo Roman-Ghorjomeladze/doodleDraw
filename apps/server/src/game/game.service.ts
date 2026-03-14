@@ -824,6 +824,58 @@ export class GameService {
   }
 
   // ---------------------------------------------------------------------------
+  // Reset to lobby
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Abort the current game and send all players back to the lobby.
+   * Clears all timers and resets round-level room state.
+   */
+  resetToLobby(roomId: string, server: Server): void {
+    const room = this.roomService.getRoom(roomId);
+    if (!room || room.phase === 'lobby') return;
+
+    // Stop all timers.
+    this.clearRoundTimer(roomId);
+    this.clearHintTimer(roomId);
+    this.clearStartCountdown(roomId);
+
+    // Reset game state.
+    room.phase = 'lobby';
+    room.currentRound = 0;
+    room.currentWord = null;
+    room.wordHint = '';
+    room.drawerId = null;
+    room.teamADrawerId = null;
+    room.teamBDrawerId = null;
+    room.roundStartTime = null;
+    room.correctGuessers = [];
+    room.drawingHistory = [];
+    room.pendingWords = [];
+    room.drawOrder = [];
+    room.drawOrderIndex = 0;
+    room.teamAScore = 0;
+    room.teamBScore = 0;
+    room.lastWinningTeam = null;
+    room.isRedrawRound = false;
+    room.playerWordHistory = new Map();
+    room.chatHistory = [];
+
+    // Reset player-level game state.
+    for (const [, player] of room.players) {
+      player.score = 0;
+      player.isDrawing = false;
+      player.hasDrawn = false;
+    }
+
+    // Notify everyone.
+    server.to(roomId).emit('game:phaseChange', { phase: 'lobby' });
+    server.to(roomId).emit('room:updated', { room: this.roomService.serializeRoom(room) });
+
+    this.logger.log(`Room ${roomId} reset to lobby (player left mid-game)`);
+  }
+
+  // ---------------------------------------------------------------------------
   // Timer cleanup
   // ---------------------------------------------------------------------------
 

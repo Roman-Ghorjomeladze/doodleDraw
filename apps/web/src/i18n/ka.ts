@@ -144,6 +144,11 @@ export const ka: Translations = {
 	'connection.playerDisconnected': '{{name}} გათიშულია',
 	'connection.playerReconnected': '{{name}} ხელახლა დაუკავშირდა',
 
+	// Player left
+	'game.playerLeft': '{{name}} თამაშიდან გავიდა',
+	'game.returnedToLobby': 'თამაში გაუქმდა. ლობიში დაბრუნება.',
+	'game.playerLeftOk': 'OK',
+
 	// Theme
 	'theme.switchToLight': 'ღია რეჟიმზე გადართვა',
 	'theme.switchToDark': 'მუქ რეჟიმზე გადართვა',

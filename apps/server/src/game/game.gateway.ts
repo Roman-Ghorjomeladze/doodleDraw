@@ -232,6 +232,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   ): Promise<void> {
     if (this.throttle(client, 'room:leave')) return;
 
+    // Capture info before the player is removed.
+    const roomBefore = this.roomService.getRoomForPlayer(client.id);
+    const wasInGame = !!(roomBefore && roomBefore.phase !== 'lobby');
+    const leavingPlayer = roomBefore?.players.get(client.id);
+    const nickname = leavingPlayer?.nickname ?? 'Unknown';
+
     const result = this.roomService.leaveRoom(client.id);
     if (!result) return;
 
@@ -239,21 +245,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     await client.leave(room.id);
 
-    this.server.to(room.id).emit('room:playerLeft', { playerId: client.id });
-    this.server.to(room.id).emit('room:updated', {
-      room: this.roomService.serializeRoom(room),
+    this.server.to(room.id).emit('room:playerLeft', {
+      playerId: client.id,
+      nickname,
+      wasInGame,
     });
 
-    // If a game is in progress and the leaving player was the drawer, end the round.
-    if (room.phase === 'drawing') {
-      const wasDrawer =
-        room.drawerId === client.id ||
-        room.teamADrawerId === client.id ||
-        room.teamBDrawerId === client.id;
-
-      if (wasDrawer) {
-        this.gameService.endRound(room.id, this.server);
-      }
+    // If a game was in progress, reset everyone back to the lobby.
+    if (wasInGame && room.players.size > 0) {
+      this.gameService.resetToLobby(room.id, this.server);
+    } else {
+      this.server.to(room.id).emit('room:updated', {
+        room: this.roomService.serializeRoom(room),
+      });
     }
   }
 
@@ -587,6 +591,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         timeLeft,
         currentWord: isDrawer ? (room.currentWord ?? undefined) : undefined,
       });
+
+      // If the drawer reconnects during word selection, re-send word options.
+      if (isDrawer && room.phase === 'selecting_word' && room.pendingWords?.length) {
+        client.emit('game:wordOptions', { words: room.pendingWords });
+      }
 
       // Notify others.
       client.to(roomId).emit('room:updated', {

@@ -32,6 +32,7 @@ interface GameState {
   isRedrawRound: boolean;
   countdownSeconds: number | null;
   pendingRoomId: string | null;
+  playerLeftNotice: string | null;
 }
 
 interface GameActions {
@@ -65,6 +66,7 @@ interface GameActions {
   setSettings: (settings: RoomSettings) => void;
   setCountdownSeconds: (seconds: number | null) => void;
   setPendingRoomId: (roomId: string | null) => void;
+  setPlayerLeftNotice: (notice: string | null) => void;
   reset: () => void;
 }
 
@@ -94,6 +96,7 @@ const initialState: GameState = {
   isRedrawRound: false,
   countdownSeconds: null,
   pendingRoomId: null,
+  playerLeftNotice: null,
 };
 
 export const useGameStore = create<GameStore>()((set) => ({
@@ -161,6 +164,8 @@ export const useGameStore = create<GameStore>()((set) => ({
   setCountdownSeconds: (countdownSeconds) => set({ countdownSeconds }),
 
   setPendingRoomId: (pendingRoomId) => set({ pendingRoomId }),
+
+  setPlayerLeftNotice: (playerLeftNotice) => set({ playerLeftNotice }),
 
   reset: () => {
     sessionStorage.removeItem('doodledraw_roomId');

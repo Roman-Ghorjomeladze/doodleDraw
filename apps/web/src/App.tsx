@@ -8,6 +8,7 @@ import RoomLobby from '@/components/Lobby/RoomLobby';
 import GameRoom from '@/components/Game/GameRoom';
 import Header from '@/components/Layout/Header';
 import ConnectionStatus from '@/components/UI/ConnectionStatus';
+import PlayerLeftNotice from '@/components/UI/PlayerLeftNotice';
 import AdminPanel from '@/components/Admin/AdminPanel';
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
         {roomId && phase === 'lobby' && <RoomLobby />}
         {roomId && phase !== 'lobby' && <GameRoom />}
       </main>
+      <PlayerLeftNotice />
     </div>
   );
 }

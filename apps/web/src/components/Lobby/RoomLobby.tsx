@@ -252,6 +252,7 @@ export default function RoomLobby() {
           />
         )}
       </AnimatePresence>
+
     </div>
   );
 }

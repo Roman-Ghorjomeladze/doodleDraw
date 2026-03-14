@@ -142,6 +142,11 @@ export const en = {
   'connection.playerDisconnected': '{{name}} lost connection',
   'connection.playerReconnected': '{{name}} reconnected',
 
+  // Player left
+  'game.playerLeft': '{{name}} left the game',
+  'game.returnedToLobby': 'The game was cancelled. Returning to lobby.',
+  'game.playerLeftOk': 'OK',
+
   // Theme
   'theme.switchToLight': 'Switch to light mode',
   'theme.switchToDark': 'Switch to dark mode',

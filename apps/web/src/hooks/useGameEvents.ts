@@ -126,8 +126,12 @@ export function useGameEvents() {
     );
 
     unsubscribers.push(
-      on('room:playerLeft', ({ playerId }) => {
+      on('room:playerLeft', ({ playerId, nickname, wasInGame }) => {
         useGameStore.getState().removePlayer(playerId);
+        // If the player left during an active game, store their name for the notice popup.
+        if (wasInGame) {
+          useGameStore.getState().setPlayerLeftNotice(nickname);
+        }
       }),
     );
 
@@ -147,6 +151,10 @@ export function useGameEvents() {
           useDrawingStore.getState().reset();
           useGameStore.getState().setWordOptions([]);
           useGameStore.getState().setWordHint('');
+          useGameStore.getState().setCurrentWord(null);
+          useGameStore.getState().setScores([]);
+          useGameStore.getState().setTimeLeft(0);
+          useGameStore.setState({ messages: [] });
         }
       }),
     );

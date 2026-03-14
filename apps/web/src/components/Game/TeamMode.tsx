@@ -12,6 +12,7 @@ import Timer from './Timer';
 import WordDisplay from './WordDisplay';
 import ScoreBoard from './ScoreBoard';
 import PlayerList from '@/components/Lobby/PlayerList';
+import GameLeaveButton from '@/components/UI/GameLeaveButton';
 
 function TeamMobileChatInput({ onExpand }: { onExpand: () => void }) {
   const { sendGuess } = useGame();
@@ -76,7 +77,7 @@ export default function TeamMode() {
     <div className="max-w-7xl mx-auto">
       {/* Word Selection Modal */}
       <AnimatePresence>
-        {phase === 'selecting_word' && isDrawer && wordOptions && (
+        {phase === 'selecting_word' && isDrawer && wordOptions.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -107,6 +108,22 @@ export default function TeamMode() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Waiting for word selection (shown to non-drawers AND to team B drawer who doesn't pick the word) */}
+      {phase === 'selecting_word' && !(isDrawer && wordOptions.length > 0) && (
+        <div className="text-center py-8">
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+            className="text-xl font-bold text-primary-600 dark:text-primary-400"
+          >
+            {t('game.choosingWord', { name: players.find(p => p.id === teamADrawerId)?.nickname || '' })}
+          </motion.div>
+          <div className="mt-6">
+            <GameLeaveButton />
+          </div>
+        </div>
+      )}
 
       {/* Team Scores Banner */}
       <div className="flex items-center justify-center gap-8 mb-4">
