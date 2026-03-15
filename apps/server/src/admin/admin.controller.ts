@@ -20,12 +20,13 @@ import {
 // Use inline type to avoid @types/express dependency.
 type ExpressRequest = { ip?: string };
 import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { RoomService } from '../game/room.service';
 import { GameService } from '../game/game.service';
 import { GameGateway } from '../game/game.gateway';
-import { DatabaseService } from '../database/database.service';
-import { languages, words } from '../database/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { Language, LanguageDocument } from '../database/schemas/language.schema';
+import { Word, WordDocument } from '../database/schemas/word.schema';
 import { AdminAuthGuard } from './admin-auth.guard';
 
 @Controller('api/admin')
@@ -43,7 +44,8 @@ export class AdminController implements OnModuleInit, OnModuleDestroy {
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
     private readonly gameGateway: GameGateway,
-    private readonly databaseService: DatabaseService,
+    @InjectModel(Language.name) private readonly languageModel: Model<LanguageDocument>,
+    @InjectModel(Word.name) private readonly wordModel: Model<WordDocument>,
   ) {}
 
   onModuleInit(): void {
@@ -328,73 +330,103 @@ export class AdminController implements OnModuleInit, OnModuleDestroy {
 
   @Get('words/stats')
   @UseGuards(AdminAuthGuard)
-  getWordStats() {
-    const db = this.databaseService.getDb();
-
-    const stats = db
-      .select({
-        languageCode: languages.code,
-        languageName: languages.name,
-        difficulty: words.difficulty,
-        count: sql<number>`count(*)`,
-      })
-      .from(words)
-      .innerJoin(languages, eq(words.languageId, languages.id))
-      .groupBy(languages.code, languages.name, words.difficulty)
-      .orderBy(languages.code, words.difficulty)
-      .all();
+  async getWordStats() {
+    const stats = await this.wordModel.aggregate([
+      {
+        $lookup: {
+          from: 'languages',
+          localField: 'languageId',
+          foreignField: '_id',
+          as: 'language',
+        },
+      },
+      { $unwind: '$language' },
+      {
+        $group: {
+          _id: {
+            languageCode: '$language.code',
+            languageName: '$language.name',
+            difficulty: '$difficulty',
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          languageCode: '$_id.languageCode',
+          languageName: '$_id.languageName',
+          difficulty: '$_id.difficulty',
+          count: 1,
+        },
+      },
+      { $sort: { languageCode: 1, difficulty: 1 } },
+    ]);
 
     return { stats };
   }
 
   @Get('words/list')
   @UseGuards(AdminAuthGuard)
-  getWords(
+  async getWords(
     @Query('language') languageCode?: string,
     @Query('difficulty') difficulty?: string,
   ) {
-    const db = this.databaseService.getDb();
+    const matchStage: Record<string, unknown> = {};
 
-    let query = db
-      .select({
-        id: words.id,
-        word: words.word,
-        difficulty: words.difficulty,
-        languageCode: languages.code,
-        languageName: languages.name,
-      })
-      .from(words)
-      .innerJoin(languages, eq(words.languageId, languages.id));
-
-    const conditions: any[] = [];
     if (languageCode) {
-      conditions.push(eq(languages.code, languageCode));
-    }
-    if (difficulty) {
-      const diff = parseInt(difficulty, 10);
-      if (!isNaN(diff) && diff >= 1 && diff <= 3) {
-        conditions.push(eq(words.difficulty, diff));
+      const lang = await this.languageModel.findOne({ code: languageCode });
+      if (lang) {
+        matchStage.languageId = lang._id;
+      } else {
+        return { words: [] };
       }
     }
 
-    const rows = conditions.length > 0
-      ? (query as any).where(and(...conditions)).orderBy(words.word).all()
-      : (query as any).orderBy(words.word).all();
+    if (difficulty) {
+      const diff = parseInt(difficulty, 10);
+      if (!isNaN(diff) && diff >= 1 && diff <= 3) {
+        matchStage.difficulty = diff;
+      }
+    }
+
+    const rows = await this.wordModel.aggregate([
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'languages',
+          localField: 'languageId',
+          foreignField: '_id',
+          as: 'language',
+        },
+      },
+      { $unwind: '$language' },
+      {
+        $project: {
+          _id: 0,
+          id: '$_id',
+          word: 1,
+          difficulty: 1,
+          languageCode: '$language.code',
+          languageName: '$language.name',
+        },
+      },
+      { $sort: { word: 1 } },
+    ]);
 
     return { words: rows };
   }
 
   @Get('words/languages')
   @UseGuards(AdminAuthGuard)
-  getLanguages() {
-    const db = this.databaseService.getDb();
-    const rows = db.select().from(languages).orderBy(languages.code).all();
+  async getLanguages() {
+    const rows = await this.languageModel.find().sort({ code: 1 }).exec();
     return { languages: rows };
   }
 
   @Post('words')
   @UseGuards(AdminAuthGuard)
-  addWord(
+  async addWord(
     @Body() body: { languageCode?: string; word?: string; difficulty?: number },
   ) {
     const { languageCode, word: rawWord, difficulty } = body;
@@ -411,68 +443,44 @@ export class AdminController implements OnModuleInit, OnModuleDestroy {
       throw new BadRequestException('Difficulty must be 1, 2, or 3');
     }
 
-    const db = this.databaseService.getDb();
-
     // Find language by code.
-    const lang = db
-      .select()
-      .from(languages)
-      .where(eq(languages.code, languageCode))
-      .get();
-
+    const lang = await this.languageModel.findOne({ code: languageCode });
     if (!lang) {
       throw new NotFoundException(`Language '${languageCode}' not found`);
     }
 
     // Check for duplicate.
-    const existing = db
-      .select()
-      .from(words)
-      .where(
-        and(
-          eq(words.languageId, lang.id),
-          eq(words.word, wordText),
-          eq(words.difficulty, difficulty),
-        ),
-      )
-      .get();
+    const existing = await this.wordModel.findOne({
+      languageId: lang._id,
+      word: wordText,
+      difficulty,
+    });
 
     if (existing) {
       throw new BadRequestException(`Word '${wordText}' already exists for ${languageCode} at difficulty ${difficulty}`);
     }
 
-    const result = db
-      .insert(words)
-      .values({
-        languageId: lang.id,
-        word: wordText,
-        difficulty,
-      })
-      .returning()
-      .get();
+    const result = await this.wordModel.create({
+      languageId: lang._id,
+      word: wordText,
+      difficulty,
+    });
 
     this.logger.log(`Admin added word '${wordText}' to ${languageCode} (difficulty ${difficulty})`);
-    return { word: { ...result, languageCode, languageName: lang.name } };
+    return { word: { id: result._id, word: result.word, difficulty: result.difficulty, languageCode, languageName: lang.name } };
   }
 
   @Delete('words/:id')
   @UseGuards(AdminAuthGuard)
-  deleteWord(@Param('id') id: string) {
-    const wordId = parseInt(id, 10);
-    if (isNaN(wordId)) {
-      throw new BadRequestException('Invalid word ID');
-    }
-
-    const db = this.databaseService.getDb();
-
-    const existing = db.select().from(words).where(eq(words.id, wordId)).get();
+  async deleteWord(@Param('id') id: string) {
+    const existing = await this.wordModel.findById(id);
     if (!existing) {
       throw new NotFoundException('Word not found');
     }
 
-    db.delete(words).where(eq(words.id, wordId)).run();
+    await this.wordModel.deleteOne({ _id: id });
 
-    this.logger.log(`Admin deleted word ID ${wordId}`);
+    this.logger.log(`Admin deleted word ID ${id}`);
     return { message: 'Word deleted' };
   }
 }

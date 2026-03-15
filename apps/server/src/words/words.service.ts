@@ -1,13 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { eq, and, sql } from 'drizzle-orm';
-import { DatabaseService } from '../database/database.service';
-import { languages, words, Language, Word } from '../database/schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Language, LanguageDocument } from '../database/schemas/language.schema';
+import { Word, WordDocument } from '../database/schemas/word.schema';
 
 @Injectable()
 export class WordsService {
   private readonly logger = new Logger(WordsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    @InjectModel(Language.name) private languageModel: Model<LanguageDocument>,
+    @InjectModel(Word.name) private wordModel: Model<WordDocument>,
+  ) {}
 
   /**
    * Retrieve N random words for a given language and difficulty level.
@@ -16,28 +20,19 @@ export class WordsService {
     languageCode: string,
     difficulty: number,
     count: number,
-  ): Promise<Word[]> {
-    const db = this.databaseService.getDb();
+  ): Promise<{ word: string; difficulty: number }[]> {
+    const language = await this.languageModel.findOne({ code: languageCode });
+    if (!language) {
+      this.logger.warn(`Language not found: ${languageCode}`);
+      return [];
+    }
 
-    const rows = db
-      .select({
-        id: words.id,
-        languageId: words.languageId,
-        word: words.word,
-        difficulty: words.difficulty,
-        createdAt: words.createdAt,
-      })
-      .from(words)
-      .innerJoin(languages, eq(words.languageId, languages.id))
-      .where(
-        and(
-          eq(languages.code, languageCode),
-          eq(words.difficulty, difficulty),
-        ),
-      )
-      .orderBy(sql`RANDOM()`)
-      .limit(count)
-      .all();
+    // $sample is MongoDB's equivalent of ORDER BY RANDOM() LIMIT N
+    const rows = await this.wordModel.aggregate<{ word: string; difficulty: number }>([
+      { $match: { languageId: language._id, difficulty } },
+      { $sample: { size: count } },
+      { $project: { _id: 0, word: 1, difficulty: 1 } },
+    ]);
 
     return rows;
   }
@@ -45,8 +40,7 @@ export class WordsService {
   /**
    * Retrieve all available languages.
    */
-  async getLanguages(): Promise<Language[]> {
-    const db = this.databaseService.getDb();
-    return db.select().from(languages).all();
+  async getLanguages(): Promise<LanguageDocument[]> {
+    return this.languageModel.find().exec();
   }
 }

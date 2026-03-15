@@ -6,8 +6,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main",
-    "db:migrate": "drizzle-kit generate && drizzle-kit migrate",
-    "db:seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed.ts"
+    "db:seed": "ts-node -r tsconfig-paths/register -r dotenv/config src/database/seeds/seed.ts"
   },
   "dependencies": {
     "@doodledraw/shared": "workspace:*",
@@ -18,8 +17,8 @@
     "@nestjs/platform-socket.io": "^11.0.0",
     "@nestjs/serve-static": "^5.0.4",
     "@nestjs/websockets": "^11.0.0",
-    "better-sqlite3": "^11.0.0",
-    "drizzle-orm": "^0.38.0",
+    "@nestjs/mongoose": "^11.0.0",
+    "mongoose": "^8.0.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
     "socket.io": "^4.8.0"
@@ -27,9 +26,8 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
-    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
-    "drizzle-kit": "^0.30.0",
+    "dotenv": "^16.0.0",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.0",
     "tsconfig-paths": "^4.2.0",
