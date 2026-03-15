@@ -1,6 +1,8 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
 import { Language, LanguageSchema } from './schemas/language.schema';
 import { Word, WordSchema } from './schemas/word.schema';
 
@@ -21,4 +23,21 @@ import { Word, WordSchema } from './schemas/word.schema';
   ],
   exports: [MongooseModule],
 })
-export class DatabaseModule {}
+export class DatabaseModule implements OnModuleInit {
+  private readonly logger = new Logger(DatabaseModule.name);
+
+  constructor(@InjectConnection() private readonly connection: Connection) {}
+
+  async onModuleInit() {
+    const { host, port, name } = this.connection;
+    this.logger.log(`MongoDB connected → ${host}:${port}/${name}`);
+
+    const langCount = await this.connection.collection('languages').countDocuments();
+    const wordCount = await this.connection.collection('words').countDocuments();
+    this.logger.log(`Database has ${langCount} languages and ${wordCount} words`);
+
+    if (wordCount === 0) {
+      this.logger.warn('Database is empty! Run "pnpm db:seed" to populate words.');
+    }
+  }
+}

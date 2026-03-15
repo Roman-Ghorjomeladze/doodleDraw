@@ -206,7 +206,7 @@ export default function DrawingCanvas({ isDrawer, isBlurred }: DrawingCanvasProp
 
   // Listen for remote draw actions
   useEffect(() => {
-    const unsub = on('draw:action', (data: DrawAction) => {
+    const handleDrawAction = (data: DrawAction) => {
       if (data.type === 'stroke' && data.points) {
         saveToHistory();
         drawLine(data.points, data.color || '#000', data.brushSize || 5, data.tool === 'eraser');
@@ -222,7 +222,13 @@ export default function DrawingCanvas({ isDrawer, isBlurred }: DrawingCanvasProp
       } else if (data.type === 'undo') {
         undoCanvas();
       }
-    });
+    };
+
+    const unsub = on('draw:action', handleDrawAction);
+
+    // Also listen for blurred draw actions (opponent team in team mode).
+    // The canvas renders them identically — the CSS blur handles the visual blur.
+    const unsub3 = on('draw:actionBlurred', handleDrawAction);
 
     const unsub2 = on('draw:history', (data: { actions: DrawAction[] }) => {
       data.actions.forEach(action => {
@@ -237,6 +243,7 @@ export default function DrawingCanvas({ isDrawer, isBlurred }: DrawingCanvasProp
     return () => {
       unsub();
       unsub2();
+      unsub3();
     };
   }, [on, drawLine, floodFill, getCtx, saveToHistory, undoCanvas]);
 

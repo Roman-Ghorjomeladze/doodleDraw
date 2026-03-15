@@ -14,7 +14,6 @@ export default function RoomLobby() {
   const { playerId } = usePlayerStore();
   const { startGame, cancelStartGame, leaveRoom, updateSettings, switchTeam } = useGame();
   const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const minPlayers = mode === 'team' ? MIN_PLAYERS_TEAM : MIN_PLAYERS_CLASSIC;
@@ -69,27 +68,9 @@ export default function RoomLobby() {
           )}
         </AnimatePresence>
 
-        {/* Room Info */}
+        {/* Mode Badge */}
         <div className="text-center mb-6">
-          <p className="text-sm text-surface-500 mb-1">{t('lobby.roomCode')}</p>
-          <button
-            onClick={() => {
-              if (!roomId) return;
-              const url = `${window.location.origin}/game/${roomId}`;
-              navigator.clipboard.writeText(url);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-            className={`text-3xl font-bold font-mono tracking-widest transition-colors ${
-              copied
-                ? 'text-success-600 dark:text-success-400'
-                : 'text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300'
-            }`}
-          >
-            {copied ? '✓ Copied!' : roomId}
-          </button>
-          <p className="text-xs text-surface-400 mt-1">{copied ? '\u00A0' : t('lobby.clickToCopy')}</p>
-          <div className="mt-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+          <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
             {mode === 'classic' ? t('lobby.classicMode') : t('lobby.teamBattle')}
           </div>
         </div>

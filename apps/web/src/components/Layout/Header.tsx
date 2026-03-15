@@ -27,7 +27,8 @@ export default function Header() {
             {roomId && (
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(roomId);
+                  const url = `${window.location.origin}/game/${roomId}`;
+                  navigator.clipboard.writeText(url);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1500);
                 }}

@@ -59,7 +59,15 @@ export default function JoinRoom() {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, ROOM_CODE_LENGTH);
+    let raw = e.clipboardData.getData('text').trim();
+
+    // Extract room code from URL (e.g. https://example.com/game/ABC123)
+    const urlMatch = raw.match(/\/game\/([A-Z0-9]{4,8})$/i);
+    if (urlMatch) {
+      raw = urlMatch[1];
+    }
+
+    const pasted = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, ROOM_CODE_LENGTH);
     const newCode = [...code];
     for (let i = 0; i < pasted.length; i++) {
       newCode[i] = pasted[i];
