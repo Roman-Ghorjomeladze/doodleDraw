@@ -59,6 +59,7 @@ export const ka: Translations = {
 	'player.drawing': 'ხატავს',
 	'player.teamA': 'გუნდი A',
 	'player.teamB': 'გუნდი B',
+	'player.joinTeam': 'შეუერთდი',
 
 	// Game
 	'game.round': 'რაუნდი {{number}}',

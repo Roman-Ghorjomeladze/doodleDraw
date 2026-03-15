@@ -59,6 +59,7 @@ export const ru: Translations = {
   'player.drawing': 'Рисует',
   'player.teamA': 'Команда A',
   'player.teamB': 'Команда B',
+  'player.joinTeam': 'Вступить',
 
   // Game
   'game.round': 'Раунд {{number}}',

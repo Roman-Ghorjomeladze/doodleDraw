@@ -57,6 +57,7 @@ export const en = {
   'player.drawing': 'Drawing',
   'player.teamA': 'Team A',
   'player.teamB': 'Team B',
+  'player.joinTeam': 'Join',
 
   // Game
   'game.round': 'Round {{number}}',

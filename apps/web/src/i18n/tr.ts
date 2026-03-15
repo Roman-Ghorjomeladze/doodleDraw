@@ -59,6 +59,7 @@ export const tr: Translations = {
   'player.drawing': 'Çiziyor',
   'player.teamA': 'Takım A',
   'player.teamB': 'Takım B',
+  'player.joinTeam': 'Katıl',
 
   // Game
   'game.round': 'Tur {{number}}',

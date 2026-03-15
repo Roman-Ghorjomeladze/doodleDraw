@@ -6,6 +6,7 @@ import {
   RoomSettings,
   GamePhase,
   GameMode,
+  Team,
 } from '@doodledraw/shared';
 import {
   ROOM_CODE_LENGTH,
@@ -55,12 +56,13 @@ export class RoomService {
       isConnected: true,
     };
 
-    // Pick random funny team names for team mode.
+    // Pick random funny team names for team mode and assign host to Team A.
     const settings = { ...DEFAULT_ROOM_SETTINGS };
     if (mode === 'team') {
       const pair = TEAM_NAME_PAIRS[Math.floor(Math.random() * TEAM_NAME_PAIRS.length)];
       settings.teamAName = pair[0];
       settings.teamBName = pair[1];
+      host.team = 'A';
     }
 
     const room: Room = {
@@ -132,6 +134,11 @@ export class RoomService {
       isHost: false,
       isConnected: true,
     };
+
+    // Auto-assign team in team mode (balance teams).
+    if (room.mode === 'team') {
+      player.team = this.getSmallestTeam(room);
+    }
 
     room.players.set(playerId, player);
     this.playerRoomMap.set(playerId, roomId);
@@ -366,6 +373,17 @@ export class RoomService {
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
+
+  private getSmallestTeam(room: Room): Team {
+    let a = 0;
+    let b = 0;
+    for (const [, p] of room.players) {
+      if (p.isSpectator) continue;
+      if (p.team === 'A') a++;
+      else if (p.team === 'B') b++;
+    }
+    return a <= b ? 'A' : 'B';
+  }
 
   private findNextHost(room: Room): Player | null {
     // Pick the first connected player.

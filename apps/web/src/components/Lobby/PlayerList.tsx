@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from '@/i18n';
-import type { Player, GameMode } from '@doodledraw/shared';
+import type { Player, GameMode, Team } from '@doodledraw/shared';
 import Avatar from '@/components/Avatar';
 
 interface PlayerListProps {
@@ -9,29 +9,96 @@ interface PlayerListProps {
   showScores?: boolean;
   teamAName?: string;
   teamBName?: string;
+  onSwitchTeam?: (team: Team) => void;
+  currentPlayerId?: string;
 }
 
-export default function PlayerList({ players, mode, showScores = false, teamAName, teamBName }: PlayerListProps) {
+export default function PlayerList({ players, mode, showScores = false, teamAName, teamBName, onSwitchTeam, currentPlayerId }: PlayerListProps) {
   const { t } = useTranslation();
   const teamA = mode === 'team' ? players.filter(p => p.team === 'A') : [];
   const teamB = mode === 'team' ? players.filter(p => p.team === 'B') : [];
+  const currentPlayer = players.find(p => p.id === currentPlayerId);
+  const myTeam = currentPlayer?.team;
 
   if (mode === 'team') {
     return (
       <div className="space-y-4">
-        <div>
-          <div className="text-xs font-bold text-team-a mb-2 uppercase tracking-wider">{teamAName || t('player.teamA')}</div>
-          <PlayerGroup players={teamA} showScores={showScores} />
-        </div>
-        <div>
-          <div className="text-xs font-bold text-team-b mb-2 uppercase tracking-wider">{teamBName || t('player.teamB')}</div>
-          <PlayerGroup players={teamB} showScores={showScores} />
-        </div>
+        <TeamSection
+          team="A"
+          teamName={teamAName || t('player.teamA')}
+          players={teamA}
+          showScores={showScores}
+          colorClass="text-team-a"
+          borderClass="border-team-a/30"
+          bgClass="bg-team-a/5 dark:bg-team-a/10"
+          btnClass="bg-team-a/20 hover:bg-team-a/30 text-team-a"
+          isMyTeam={myTeam === 'A'}
+          onSwitchTeam={onSwitchTeam}
+        />
+        <TeamSection
+          team="B"
+          teamName={teamBName || t('player.teamB')}
+          players={teamB}
+          showScores={showScores}
+          colorClass="text-team-b"
+          borderClass="border-team-b/30"
+          bgClass="bg-team-b/5 dark:bg-team-b/10"
+          btnClass="bg-team-b/20 hover:bg-team-b/30 text-team-b"
+          isMyTeam={myTeam === 'B'}
+          onSwitchTeam={onSwitchTeam}
+        />
       </div>
     );
   }
 
   return <PlayerGroup players={players} showScores={showScores} />;
+}
+
+function TeamSection({
+  team,
+  teamName,
+  players,
+  showScores,
+  colorClass,
+  borderClass,
+  bgClass,
+  btnClass,
+  isMyTeam,
+  onSwitchTeam,
+}: {
+  team: Team;
+  teamName: string;
+  players: Player[];
+  showScores: boolean;
+  colorClass: string;
+  borderClass: string;
+  bgClass: string;
+  btnClass: string;
+  isMyTeam: boolean;
+  onSwitchTeam?: (team: Team) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className={`rounded-lg border ${borderClass} ${bgClass} p-3`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className={`text-xs font-bold ${colorClass} uppercase tracking-wider`}>
+          {teamName} ({players.length})
+        </div>
+        {onSwitchTeam && !isMyTeam && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onSwitchTeam(team)}
+            className={`text-xs font-semibold px-3 py-1 rounded-full transition-colors ${btnClass}`}
+          >
+            {t('player.joinTeam')}
+          </motion.button>
+        )}
+      </div>
+      <PlayerGroup players={players} showScores={showScores} />
+    </div>
+  );
 }
 
 function PlayerGroup({ players, showScores }: { players: Player[]; showScores: boolean }) {

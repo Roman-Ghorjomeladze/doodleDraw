@@ -142,10 +142,20 @@ export function useGameEvents() {
     );
 
     unsubscribers.push(
-      on('game:phaseChange', ({ phase }) => {
-        useGameStore.getState().setPhase(phase);
-        // Clear countdown when game starts
-        useGameStore.getState().setCountdownSeconds(null);
+      on('game:phaseChange', ({ phase, context }) => {
+        // Apply drawer IDs from context together with phase in a single
+        // setState so React renders with the correct isDrawer on the first frame.
+        // Without this, there's a race: phase updates to 'selecting_word' but
+        // teamADrawerId is still null until the subsequent room:updated event,
+        // causing the drawer to briefly (or permanently) see "choosing a word"
+        // instead of the word selection modal.
+        const stateUpdate: Record<string, unknown> = { phase, countdownSeconds: null };
+        if (context) {
+          if (context.drawerId !== undefined) stateUpdate.drawerId = context.drawerId;
+          if (context.teamADrawerId !== undefined) stateUpdate.teamADrawerId = context.teamADrawerId;
+          if (context.teamBDrawerId !== undefined) stateUpdate.teamBDrawerId = context.teamBDrawerId;
+        }
+        useGameStore.setState(stateUpdate);
 
         if (phase === 'lobby') {
           useDrawingStore.getState().reset();

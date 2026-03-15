@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
+import { usePlayerStore } from '@/stores/playerStore';
 import { useGame } from '@/hooks/useGame';
 import { useTranslation } from '@/i18n';
 import PlayerList from './PlayerList';
@@ -10,7 +11,8 @@ import { DEFAULT_ROOM_SETTINGS, MIN_PLAYERS_CLASSIC, MIN_PLAYERS_TEAM } from '@d
 
 export default function RoomLobby() {
   const { roomId, mode, players, isHost, settings, countdownSeconds } = useGameStore();
-  const { startGame, cancelStartGame, leaveRoom, updateSettings } = useGame();
+  const { playerId } = usePlayerStore();
+  const { startGame, cancelStartGame, leaveRoom, updateSettings, switchTeam } = useGame();
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -98,7 +100,7 @@ export default function RoomLobby() {
             <h3 className="font-semibold mb-3">
               {t('lobby.players')} ({players.length}/{currentSettings.maxPlayers})
             </h3>
-            <PlayerList players={players} mode={mode || 'classic'} teamAName={currentSettings.teamAName} teamBName={currentSettings.teamBName} />
+            <PlayerList players={players} mode={mode || 'classic'} teamAName={currentSettings.teamAName} teamBName={currentSettings.teamBName} onSwitchTeam={mode === 'team' ? switchTeam : undefined} currentPlayerId={playerId || undefined} />
           </div>
 
           {/* Settings (host only) */}
