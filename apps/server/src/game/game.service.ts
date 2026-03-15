@@ -534,6 +534,7 @@ export class GameService {
     // Store word options and set phase atomically (no await between them).
     room.pendingWords = wordOptions;
     room.phase = 'selecting_word';
+    this.logger.log(`[WORD_OPTIONS] Set ${wordOptions.length} words, phase=selecting_word, teamADrawerId=${room.teamADrawerId}`);
 
     // Send word options to the drawer(s).
     if (room.mode === 'classic') {

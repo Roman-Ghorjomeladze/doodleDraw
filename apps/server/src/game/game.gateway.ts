@@ -583,6 +583,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         room.teamADrawerId === client.id ||
         room.teamBDrawerId === client.id;
 
+      this.logger.log(
+        `[RECONNECT] clientId=${client.id} isDrawer=${isDrawer} phase=${room.phase} pendingWords=${room.pendingWords?.length ?? 0}`,
+      );
+
       // Determine word options to restore for the drawer during word selection.
       const wordOptions =
         isDrawer && room.phase === 'selecting_word' && room.pendingWords?.length
