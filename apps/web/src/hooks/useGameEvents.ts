@@ -157,6 +157,14 @@ export function useGameEvents() {
         }
         useGameStore.setState(stateUpdate);
 
+        if (phase === 'selecting_word') {
+          // Clear previous round's word so the drawer doesn't see stale data.
+          useGameStore.getState().setCurrentWord(null);
+          useGameStore.getState().setWordHint('');
+          useGameStore.setState({ messages: [] });
+          useDrawingStore.getState().reset();
+        }
+
         if (phase === 'lobby') {
           useDrawingStore.getState().reset();
           useGameStore.getState().setWordOptions([]);
@@ -291,6 +299,7 @@ export function useGameEvents() {
         const store = useGameStore.getState();
         store.setWordHint(wordHint);
         store.setWordOptions([]);
+        store.setCurrentWord(currentWord ?? null);
         useGameStore.setState({
           currentRound: roundNumber,
           teamADrawerId,

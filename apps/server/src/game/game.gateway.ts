@@ -492,7 +492,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         };
 
         this.storeChatMessage(room, message);
-        this.server.to(room.id).emit('chat:message', message);
+        this.emitChatToTeam(room, player.team, message);
         return;
       }
     }
@@ -510,7 +510,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     };
 
     this.storeChatMessage(room, message);
-    this.server.to(room.id).emit('chat:message', message);
+    this.emitChatToTeam(room, player.team, message);
   }
 
   // ---------------------------------------------------------------------------
@@ -716,6 +716,26 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     room.chatHistory.push(message);
     if (room.chatHistory.length > MAX_CHAT_HISTORY) {
       room.chatHistory = room.chatHistory.slice(-MAX_CHAT_HISTORY);
+    }
+  }
+
+  /**
+   * Emit a chat message scoped to the sender's team in team mode,
+   * or to the entire room in classic mode / lobby.
+   */
+  private emitChatToTeam(
+    room: import('@doodledraw/shared').Room,
+    senderTeam: string | undefined,
+    message: ChatMessage,
+  ): void {
+    if (room.mode !== 'team' || !senderTeam) {
+      this.server.to(room.id).emit('chat:message', message);
+      return;
+    }
+    for (const [id, p] of room.players) {
+      if (p.team === senderTeam || p.isSpectator) {
+        this.server.to(id).emit('chat:message', message);
+      }
     }
   }
 }

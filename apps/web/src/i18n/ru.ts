@@ -45,6 +45,8 @@ export const ru: Translations = {
   'lobby.needMorePlayers': 'Нужно ещё {{count}} игрок(ов)',
   'lobby.teamAName': 'Название команды A',
   'lobby.teamBName': 'Название команды B',
+  'lobby.hints': 'Подсказки',
+  'lobby.hintsDesc': 'Постепенно раскрывать буквы слова',
   'lobby.redrawRound': 'Раунд перерисовки',
   'lobby.redrawRoundDesc': 'После всех раундов перерисуйте предыдущие слова',
   'lobby.leaveConfirmTitle': 'Выйти из комнаты?',
@@ -87,6 +89,7 @@ export const ru: Translations = {
   'score.gameOver': 'Игра окончена!',
   'score.winner': 'Победитель!',
   'score.backToHome': 'На главную',
+  'score.noPlayers': 'Нет игроков',
 
   // Tools
   'tool.pen': 'Кисть',

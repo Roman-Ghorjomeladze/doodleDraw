@@ -45,6 +45,8 @@ export const ka: Translations = {
 	'lobby.needMorePlayers': 'საჭიროა კიდევ {{count}} მოთამაშე',
 	'lobby.teamAName': 'გუნდი A-ს სახელი',
 	'lobby.teamBName': 'გუნდი B-ს სახელი',
+	'lobby.hints': 'მინიშნებები',
+	'lobby.hintsDesc': 'თანდათან გამოაჩინეთ სიტყვის ასოები',
 	'lobby.redrawRound': 'ხელახალი ხატვის რაუნდი',
 	'lobby.redrawRoundDesc': 'ყველა რაუნდის შემდეგ, ხელახლა დახატეთ წინა სიტყვები',
 	'lobby.leaveConfirmTitle': 'ოთახიდან გასვლა?',
@@ -87,6 +89,7 @@ export const ka: Translations = {
 	'score.gameOver': 'თამაში დასრულდა!',
 	'score.winner': 'გამარჯვებული!',
 	'score.backToHome': 'მთავარ გვერდზე დაბრუნება',
+	'score.noPlayers': 'მოთამაშეები არ არიან',
 
 	// Tools
 	'tool.pen': 'კალამი',

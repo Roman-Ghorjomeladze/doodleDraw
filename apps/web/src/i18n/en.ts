@@ -43,6 +43,8 @@ export const en = {
   'lobby.needMorePlayers': 'Need {{count}} more player(s)',
   'lobby.teamAName': 'Team A Name',
   'lobby.teamBName': 'Team B Name',
+  'lobby.hints': 'Hints',
+  'lobby.hintsDesc': 'Gradually reveal letters of the word',
   'lobby.redrawRound': 'Redraw Round',
   'lobby.redrawRoundDesc': 'After all rounds, redraw previous words',
   'lobby.leaveConfirmTitle': 'Leave Room?',
@@ -85,6 +87,7 @@ export const en = {
   'score.gameOver': 'Game Over!',
   'score.winner': 'Winner!',
   'score.backToHome': 'Back to Home',
+  'score.noPlayers': 'No players',
 
   // Tools
   'tool.pen': 'Pen',

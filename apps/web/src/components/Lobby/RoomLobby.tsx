@@ -194,6 +194,19 @@ export default function RoomLobby() {
               <label className={`flex items-center gap-2 py-2 ${!isHost ? 'opacity-50' : 'cursor-pointer'}`}>
                 <input
                   type="checkbox"
+                  checked={currentSettings.hintsEnabled}
+                  onChange={e => isHost && updateSettings({ hintsEnabled: e.target.checked })}
+                  disabled={!isHost}
+                  className="w-4 h-4 rounded accent-primary-500"
+                />
+                <div>
+                  <div className="text-sm font-medium">{t('lobby.hints')}</div>
+                  <div className="text-xs text-surface-500">{t('lobby.hintsDesc')}</div>
+                </div>
+              </label>
+              <label className={`flex items-center gap-2 py-2 ${!isHost ? 'opacity-50' : 'cursor-pointer'}`}>
+                <input
+                  type="checkbox"
                   checked={currentSettings.redrawEnabled}
                   onChange={e => isHost && updateSettings({ redrawEnabled: e.target.checked })}
                   disabled={!isHost}

@@ -45,6 +45,8 @@ export const tr: Translations = {
   'lobby.needMorePlayers': '{{count}} oyuncu daha gerekli',
   'lobby.teamAName': 'Takım A Adı',
   'lobby.teamBName': 'Takım B Adı',
+  'lobby.hints': 'İpuçları',
+  'lobby.hintsDesc': 'Kelimenin harflerini yavaş yavaş gösterin',
   'lobby.redrawRound': 'Yeniden Çizim Turu',
   'lobby.redrawRoundDesc': 'Tüm turlardan sonra önceki kelimeleri tekrar çizin',
   'lobby.leaveConfirmTitle': 'Odadan Ayrıl?',
@@ -87,6 +89,7 @@ export const tr: Translations = {
   'score.gameOver': 'Oyun Bitti!',
   'score.winner': 'Kazanan!',
   'score.backToHome': 'Ana Sayfaya Dön',
+  'score.noPlayers': 'Oyuncu yok',
 
   // Tools
   'tool.pen': 'Kalem',
