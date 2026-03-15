@@ -61,10 +61,12 @@ function main(): void {
 
   log('Tables verified / created');
 
-  // Clear existing data
+  // Clear existing data (disable FK checks to avoid constraint issues)
   log('Clearing existing data...');
+  sqlite.pragma('foreign_keys = OFF');
   db.run(sql`DELETE FROM words`);
   db.run(sql`DELETE FROM languages`);
+  sqlite.pragma('foreign_keys = ON');
   log('Existing data cleared');
 
   // Seed all languages
