@@ -330,7 +330,7 @@ export function useGameEvents() {
     );
 
     unsubscribers.push(
-      on('game:reconnected', ({ room, drawingHistory, messages, timeLeft, currentWord }) => {
+      on('game:reconnected', ({ room, drawingHistory, messages, timeLeft, currentWord, wordOptions }) => {
         const store = useGameStore.getState();
         // Update player ID to the new socket ID (server remapped it).
         const oldPlayerId = usePlayerStore.getState().playerId;
@@ -358,6 +358,11 @@ export function useGameEvents() {
 
         if (currentWord) {
           store.setCurrentWord(currentWord);
+        }
+
+        // Restore word options for drawer during word selection phase.
+        if (wordOptions?.length) {
+          store.setWordOptions(wordOptions);
         }
 
         // Figure out new player ID — the server changed it to the new socket ID.

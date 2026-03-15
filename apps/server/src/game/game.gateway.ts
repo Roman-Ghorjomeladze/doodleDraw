@@ -583,6 +583,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         room.teamADrawerId === client.id ||
         room.teamBDrawerId === client.id;
 
+      // Determine word options to restore for the drawer during word selection.
+      const wordOptions =
+        isDrawer && room.phase === 'selecting_word' && room.pendingWords?.length
+          ? room.pendingWords
+          : undefined;
+
       // Send full state to the reconnecting client.
       client.emit('game:reconnected', {
         room: this.roomService.serializeRoom(room),
@@ -590,11 +596,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         messages: room.chatHistory.slice(-MAX_CHAT_HISTORY),
         timeLeft,
         currentWord: isDrawer ? (room.currentWord ?? undefined) : undefined,
+        wordOptions,
       });
 
-      // If the drawer reconnects during word selection, re-send word options.
-      if (isDrawer && room.phase === 'selecting_word' && room.pendingWords?.length) {
-        client.emit('game:wordOptions', { words: room.pendingWords });
+      // Also send as a separate event for backward compatibility.
+      if (wordOptions) {
+        client.emit('game:wordOptions', { words: wordOptions });
       }
 
       // Notify others.

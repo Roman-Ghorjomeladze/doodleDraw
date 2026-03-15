@@ -71,6 +71,7 @@ export interface ServerToClientEvents {
     messages: ChatMessage[];
     timeLeft: number;
     currentWord?: string;
+    wordOptions?: { word: string; difficulty: number }[];
   }) => void;
   'room:spectateJoined': (data: {
     room: SerializedRoom;
