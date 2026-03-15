@@ -1,14 +1,19 @@
 import { useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
+import { useGame } from '@/hooks/useGame';
 import { useTranslation } from '@/i18n';
 import ThemeToggle from './ThemeToggle';
 import SettingsPanel from './SettingsPanel';
 import AnimatedLogo from '@/components/UI/AnimatedLogo';
+import ConfirmModal from '@/components/UI/ConfirmModal';
 
 export default function Header() {
   const { roomId, phase } = useGameStore();
+  const { leaveRoom } = useGame();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const { t } = useTranslation();
 
   return (
@@ -16,8 +21,8 @@ export default function Header() {
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-surface-900/80 border-b border-surface-200 dark:border-surface-700 px-4 py-3">
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1>
-              <AnimatedLogo text={t('app.title')} size="sm" animationKey={phase} />
+            <h1 onClick={roomId ? () => setShowLeaveConfirm(true) : undefined} className="cursor-pointer">
+              <AnimatedLogo text={t('app.title')} size="sm" animationKey={roomId ?? 'home'} />
             </h1>
             {roomId && (
               <button
@@ -53,6 +58,22 @@ export default function Header() {
         </div>
       </header>
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AnimatePresence>
+        {showLeaveConfirm && (
+          <ConfirmModal
+            title={t('lobby.leaveConfirmTitle')}
+            message={t('lobby.leaveConfirmMessage')}
+            confirmLabel={t('lobby.confirmLeave')}
+            cancelLabel={t('lobby.cancel')}
+            variant="danger"
+            onConfirm={() => {
+              setShowLeaveConfirm(false);
+              leaveRoom();
+            }}
+            onCancel={() => setShowLeaveConfirm(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

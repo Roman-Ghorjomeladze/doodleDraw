@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useGameStore } from '@/stores/gameStore';
 import { useTranslation } from '@/i18n';
 import CreateRoom from './CreateRoom';
 import JoinRoom from './JoinRoom';
@@ -16,6 +17,7 @@ function hasRoomCodeInUrl(): boolean {
 export default function HomePage() {
   const [tab, setTab] = useState<Tab>(() => hasRoomCodeInUrl() ? 'join' : 'create');
   const [showRules, setShowRules] = useState(false);
+  const { roomId } = useGameStore();
   const { t } = useTranslation();
 
   return (
@@ -26,7 +28,7 @@ export default function HomePage() {
         className="text-center mb-8"
       >
         <h2 className="mb-2">
-          <AnimatedLogo text={t('app.title')} size="lg" />
+          <AnimatedLogo text={t('app.title')} size="lg" animationKey={roomId ?? 'home'} />
         </h2>
         <p className="text-surface-500 dark:text-surface-400">
           {t('app.subtitle')}
