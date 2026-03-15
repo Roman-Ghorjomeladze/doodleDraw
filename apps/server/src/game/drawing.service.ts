@@ -124,8 +124,20 @@ export class DrawingService {
     if (room.mode === 'classic') {
       server.to(room.id).emit('draw:action', clearAction);
     } else {
-      // In team mode, both teams see the clear.
-      server.to(room.id).emit('draw:action', clearAction);
+      // Team mode: send clear to same team as draw:action, to opponent as draw:actionBlurred.
+      const drawerPlayer = room.players.get(playerId);
+      if (!drawerPlayer || !drawerPlayer.team) return;
+
+      for (const [pid, player] of room.players) {
+        if (pid === playerId) continue;
+        if (!player.isConnected) continue;
+
+        if (player.isSpectator || player.team === drawerPlayer.team) {
+          server.to(pid).emit('draw:action', clearAction);
+        } else {
+          server.to(pid).emit('draw:actionBlurred', clearAction);
+        }
+      }
     }
   }
 

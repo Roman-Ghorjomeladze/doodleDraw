@@ -166,6 +166,8 @@ export default function TeamMode() {
 											: isTeamBDrawer && phase === 'drawing'
 									}
 									isBlurred={false}
+									listenEvent='draw:action'
+									replayEventName='doodledraw:replayHistory'
 								/>
 							</div>
 
@@ -178,7 +180,12 @@ export default function TeamMode() {
 								>
 									{oppTeamName}
 								</div>
-								<DrawingCanvas isDrawer={false} isBlurred={!isSpectator} />
+								<DrawingCanvas
+									isDrawer={false}
+									isBlurred={!isSpectator}
+									listenEvent='draw:actionBlurred'
+									replayEventName='doodledraw:replayHistoryBlurred'
+								/>
 							</div>
 						</div>
 

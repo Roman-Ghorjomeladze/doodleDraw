@@ -383,15 +383,33 @@ export function useGameEvents() {
           }
         }
 
-        // Replay drawing history by emitting to the canvas via the draw:history event.
-        // The DrawingCanvas listens for draw:history.
+        // Replay drawing history on canvases.
         if (drawingHistory.length > 0) {
-          // Use a small delay to ensure canvas is mounted.
           setTimeout(() => {
-            const event = new CustomEvent('doodledraw:replayHistory', {
-              detail: { actions: drawingHistory },
-            });
-            window.dispatchEvent(event);
+            if (room.mode === 'team') {
+              // In team mode, split history by team so each canvas gets correct actions.
+              const myTeam = me?.team ?? 'A';
+              const myDrawerId = myTeam === 'A' ? room.teamADrawerId : room.teamBDrawerId;
+              const oppDrawerId = myTeam === 'A' ? room.teamBDrawerId : room.teamADrawerId;
+
+              const myActions = drawingHistory.filter((a: any) => a.playerId === myDrawerId);
+              const oppActions = drawingHistory.filter((a: any) => a.playerId === oppDrawerId);
+
+              if (myActions.length > 0) {
+                window.dispatchEvent(new CustomEvent('doodledraw:replayHistory', {
+                  detail: { actions: myActions },
+                }));
+              }
+              if (oppActions.length > 0) {
+                window.dispatchEvent(new CustomEvent('doodledraw:replayHistoryBlurred', {
+                  detail: { actions: oppActions },
+                }));
+              }
+            } else {
+              window.dispatchEvent(new CustomEvent('doodledraw:replayHistory', {
+                detail: { actions: drawingHistory },
+              }));
+            }
           }, 100);
         }
 
@@ -423,13 +441,29 @@ export function useGameEvents() {
         });
         useGameStore.setState({ settings: room.settings, messages, timeLeft, isHost: false });
 
-        // Replay drawing history on the canvas.
+        // Replay drawing history on canvases.
         if (drawingHistory.length > 0) {
           setTimeout(() => {
-            const event = new CustomEvent('doodledraw:replayHistory', {
-              detail: { actions: drawingHistory },
-            });
-            window.dispatchEvent(event);
+            if (room.mode === 'team') {
+              // Spectators see Team A as main canvas, Team B as PiP.
+              const teamAActions = drawingHistory.filter((a: any) => a.playerId === room.teamADrawerId);
+              const teamBActions = drawingHistory.filter((a: any) => a.playerId === room.teamBDrawerId);
+
+              if (teamAActions.length > 0) {
+                window.dispatchEvent(new CustomEvent('doodledraw:replayHistory', {
+                  detail: { actions: teamAActions },
+                }));
+              }
+              if (teamBActions.length > 0) {
+                window.dispatchEvent(new CustomEvent('doodledraw:replayHistoryBlurred', {
+                  detail: { actions: teamBActions },
+                }));
+              }
+            } else {
+              window.dispatchEvent(new CustomEvent('doodledraw:replayHistory', {
+                detail: { actions: drawingHistory },
+              }));
+            }
           }, 100);
         }
 

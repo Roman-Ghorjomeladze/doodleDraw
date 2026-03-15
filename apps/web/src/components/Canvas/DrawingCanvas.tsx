@@ -2,14 +2,23 @@ import { useRef, useEffect, useCallback } from 'react';
 import { useDrawingStore } from '@/stores/drawingStore';
 import { useSocket } from '@/hooks/useSocket';
 import { cn } from '@/utils/cn';
-import type { DrawAction } from '@doodledraw/shared';
+import type { DrawAction, ServerToClientEvents } from '@doodledraw/shared';
 
 interface DrawingCanvasProps {
   isDrawer: boolean;
   isBlurred: boolean;
+  /** Which socket event to listen to for incoming draw actions (default: 'draw:action'). */
+  listenEvent?: keyof ServerToClientEvents;
+  /** Which custom DOM event name to listen to for history replay (default: 'doodledraw:replayHistory'). */
+  replayEventName?: string;
 }
 
-export default function DrawingCanvas({ isDrawer, isBlurred }: DrawingCanvasProps) {
+export default function DrawingCanvas({
+  isDrawer,
+  isBlurred,
+  listenEvent = 'draw:action',
+  replayEventName = 'doodledraw:replayHistory',
+}: DrawingCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
   const pointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -224,11 +233,7 @@ export default function DrawingCanvas({ isDrawer, isBlurred }: DrawingCanvasProp
       }
     };
 
-    const unsub = on('draw:action', handleDrawAction);
-
-    // Also listen for blurred draw actions (opponent team in team mode).
-    // The canvas renders them identically — the CSS blur handles the visual blur.
-    const unsub3 = on('draw:actionBlurred', handleDrawAction);
+    const unsub = on(listenEvent, handleDrawAction);
 
     const unsub2 = on('draw:history', (data: { actions: DrawAction[] }) => {
       data.actions.forEach(action => {
@@ -243,9 +248,8 @@ export default function DrawingCanvas({ isDrawer, isBlurred }: DrawingCanvasProp
     return () => {
       unsub();
       unsub2();
-      unsub3();
     };
-  }, [on, drawLine, floodFill, getCtx, saveToHistory, undoCanvas]);
+  }, [on, listenEvent, drawLine, floodFill, getCtx, saveToHistory, undoCanvas]);
 
   // Clear canvas when isDrawer changes (new round) or on mount
   useEffect(() => {
@@ -279,9 +283,28 @@ export default function DrawingCanvas({ isDrawer, isBlurred }: DrawingCanvasProp
         }
       }
     };
-    window.addEventListener('doodledraw:replayHistory', handleReplay);
-    return () => window.removeEventListener('doodledraw:replayHistory', handleReplay);
-  }, [drawLine, floodFill, getCtx]);
+    window.addEventListener(replayEventName, handleReplay);
+    return () => window.removeEventListener(replayEventName, handleReplay);
+  }, [drawLine, floodFill, getCtx, replayEventName]);
+
+  // Listen for local undo/clear (triggered by the drawer's own toolbar)
+  useEffect(() => {
+    if (!isDrawer) return;
+    const handleLocalUndo = () => undoCanvas();
+    const handleLocalClear = () => {
+      const ctx = getCtx();
+      if (ctx && canvasRef.current) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        historyRef.current = [];
+      }
+    };
+    window.addEventListener('doodledraw:localUndo', handleLocalUndo);
+    window.addEventListener('doodledraw:localClear', handleLocalClear);
+    return () => {
+      window.removeEventListener('doodledraw:localUndo', handleLocalUndo);
+      window.removeEventListener('doodledraw:localClear', handleLocalClear);
+    };
+  }, [isDrawer, undoCanvas, getCtx]);
 
   return (
     <div className="relative rounded-game overflow-hidden shadow-game-lg bg-white dark:bg-white">
@@ -292,7 +315,7 @@ export default function DrawingCanvas({ isDrawer, isBlurred }: DrawingCanvasProp
         className={cn(
           'w-full aspect-[4/3] touch-none bg-white',
           isDrawer ? 'cursor-crosshair' : 'cursor-default',
-          isBlurred && 'blur-lg',
+          isBlurred && 'blur-sm',
           !isDrawer && 'pointer-events-none'
         )}
       />

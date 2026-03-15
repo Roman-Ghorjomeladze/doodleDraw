@@ -19,10 +19,14 @@ export default function ToolBar() {
   const { t } = useTranslation();
 
   const handleClear = () => {
+    // Dispatch a local clear event so the drawer's canvas clears immediately.
+    window.dispatchEvent(new CustomEvent('doodledraw:localClear'));
     socket.current?.emit('draw:clear');
   };
 
   const handleUndo = () => {
+    // Dispatch a local undo event so the drawer's canvas reverts immediately.
+    window.dispatchEvent(new CustomEvent('doodledraw:localUndo'));
     socket.current?.emit('draw:undo');
   };
 
