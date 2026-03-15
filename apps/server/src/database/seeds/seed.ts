@@ -22,7 +22,8 @@ function log(msg: string): void {
 // Main
 // ---------------------------------------------------------------------------
 function main(): void {
-  const dbPath = path.resolve(__dirname, '../../../data/doodledraw.db');
+  // Use the same path as DatabaseService: resolve from CWD (project root), not __dirname.
+  const dbPath = path.resolve('./data/doodledraw.db');
   const dbDir = path.dirname(dbPath);
 
   // Ensure the data directory exists
