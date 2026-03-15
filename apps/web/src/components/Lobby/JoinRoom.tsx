@@ -133,7 +133,7 @@ export default function JoinRoom() {
           {t('create.avatar')}
         </label>
         <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-          {AVATAR_SEEDS.map(seed => (
+          {PERSON_AVATAR_SEEDS.map(seed => (
             <motion.button
               key={seed}
               whileHover={{ scale: 1.15 }}
@@ -159,7 +159,7 @@ export default function JoinRoom() {
             animate={{ opacity: 1, height: 'auto' }}
             className="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-2"
           >
-            {PERSON_AVATAR_SEEDS.map(seed => (
+            {AVATAR_SEEDS.map(seed => (
               <motion.button
                 key={seed}
                 whileHover={{ scale: 1.15 }}
