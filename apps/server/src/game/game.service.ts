@@ -510,12 +510,16 @@ export class GameService {
   // ---------------------------------------------------------------------------
 
   private async presentWordOptions(room: Room, server: Server): Promise<void> {
-    room.phase = 'selecting_word';
+    // Clear round-level state before the async DB call.
     room.currentWord = null;
     room.wordHint = '';
     room.correctGuessers = [];
     room.drawingHistory = [];
 
+    // Fetch words BEFORE setting phase so that room.pendingWords and
+    // room.phase are always consistent.  If a reconnection happens during
+    // this await, the phase is still the previous one (e.g. round_end)
+    // and the client correctly restores that state.
     const words = await this.wordsService.getRandomWords(
       room.settings.language,
       room.settings.difficulty,
@@ -527,8 +531,9 @@ export class GameService {
       difficulty: w.difficulty,
     }));
 
-    // Store word options on the room so selectWord can reference them.
+    // Store word options and set phase atomically (no await between them).
     room.pendingWords = wordOptions;
+    room.phase = 'selecting_word';
 
     // Send word options to the drawer(s).
     if (room.mode === 'classic') {
