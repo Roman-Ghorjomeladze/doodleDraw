@@ -205,7 +205,7 @@ export default function TeamMode() {
 
 					{/* Right Sidebar - Chat (desktop) */}
 					<div className='hidden lg:block h-[calc(100vh-200px)] min-h-[400px]'>
-						<GuessingChat isDrawer={isDrawer} />
+						<GuessingChat isDrawer={isDrawer} invertLayout />
 					</div>
 				</div>
 			)}

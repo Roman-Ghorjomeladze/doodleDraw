@@ -144,7 +144,7 @@ export default function ClassicMode() {
 
             {/* Inline chat below canvas (tablet / mobile) */}
             <div className="lg:hidden h-[250px]">
-              <GuessingChat isDrawer={isDrawer} />
+              <GuessingChat isDrawer={isDrawer} invertLayout />
             </div>
           </div>
 

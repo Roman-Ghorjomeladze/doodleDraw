@@ -102,6 +102,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     const room = this.roomService.handleDisconnect(client.id);
     if (room) {
+      // If the game already ended, silently clean up — no notifications needed.
+      if (room.phase === 'game_end') return;
+
       this.server.to(room.id).emit('room:updated', {
         room: this.roomService.serializeRoom(room),
       });
@@ -244,6 +247,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     // Capture info before the player is removed.
     const roomBefore = this.roomService.getRoomForPlayer(client.id);
     const wasInGame = !!(roomBefore && roomBefore.phase !== 'lobby');
+    const gameFinished = roomBefore?.phase === 'game_end';
     const leavingPlayer = roomBefore?.players.get(client.id);
     const nickname = leavingPlayer?.nickname ?? 'Unknown';
 
@@ -254,19 +258,26 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     await client.leave(room.id);
 
-    this.server.to(room.id).emit('room:playerLeft', {
-      playerId: client.id,
-      nickname,
-      wasInGame,
-    });
-
-    // If a game was in progress, reset everyone back to the lobby.
-    if (wasInGame && room.players.size > 0) {
-      this.gameService.resetToLobby(room.id, this.server);
-    } else {
+    // If the game already ended, silently remove — no notifications or lobby reset.
+    if (gameFinished) {
       this.server.to(room.id).emit('room:updated', {
         room: this.roomService.serializeRoom(room),
       });
+    } else {
+      this.server.to(room.id).emit('room:playerLeft', {
+        playerId: client.id,
+        nickname,
+        wasInGame,
+      });
+
+      // If a game was in progress, reset everyone back to the lobby.
+      if (wasInGame && room.players.size > 0) {
+        this.gameService.resetToLobby(room.id, this.server);
+      } else {
+        this.server.to(room.id).emit('room:updated', {
+          room: this.roomService.serializeRoom(room),
+        });
+      }
     }
 
     this.broadcastPublicRooms();

@@ -67,9 +67,15 @@
 [data-font-size="medium"] { font-size: 18px; }
 [data-font-size="large"] { font-size: 20px; }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+/* Prevent iOS overscroll bounce and unwanted page-level scrolling */
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent focus-driven scroll on phase transitions */
+*:focus {
+  scroll-margin: 0;
 }
 
 /* Selection color */
