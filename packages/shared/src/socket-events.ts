@@ -8,6 +8,8 @@ import type {
   SerializedRoom,
   RoomSettings,
   Handicap,
+  PublicRoomInfo,
+  OngoingGameInfo,
 } from './game-types';
 
 export interface ClientToServerEvents {
@@ -27,6 +29,8 @@ export interface ClientToServerEvents {
   'team:switch': (data: { team: Team }) => void;
   'game:reconnect': (data: { roomId: string; playerId: string }) => void;
   'room:spectate': (data: { roomId: string; nickname: string; avatar: string }) => void;
+  'rooms:list': () => void;
+  'rooms:ongoingList': () => void;
 }
 
 export interface ServerToClientEvents {
@@ -80,4 +84,8 @@ export interface ServerToClientEvents {
     messages: ChatMessage[];
     timeLeft: number;
   }) => void;
+  'rooms:list': (data: { rooms: PublicRoomInfo[] }) => void;
+  'rooms:updated': (data: { rooms: PublicRoomInfo[] }) => void;
+  'rooms:ongoingList': (data: { rooms: OngoingGameInfo[] }) => void;
+  'rooms:ongoingUpdated': (data: { rooms: OngoingGameInfo[] }) => void;
 }

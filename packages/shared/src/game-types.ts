@@ -30,6 +30,7 @@ export interface RoomSettings {
   totalRounds: number;
   hintsEnabled: boolean;
   redrawEnabled: boolean;
+  isPublic: boolean;
   teamAName: string;
   teamBName: string;
 }
@@ -40,6 +41,7 @@ export interface Room {
   phase: GamePhase;
   settings: RoomSettings;
   players: Map<string, Player>;
+  createdAt: number;
   currentRound: number;
   currentWord: string | null;
   wordHint: string;
@@ -97,6 +99,7 @@ export interface ChatMessage {
   isCorrectGuess: boolean;
   isSystemMessage: boolean;
   isCloseGuess: boolean;
+  isSpectatorMessage?: boolean;
 }
 
 export interface GameScore {
@@ -106,6 +109,32 @@ export interface GameScore {
   team?: Team;
   correctGuesses: number;
   drawingScore: number;
+}
+
+export interface PublicRoomInfo {
+  id: string;
+  mode: GameMode;
+  hostNickname: string;
+  hostAvatar: string;
+  playerCount: number;
+  maxPlayers: number;
+  language: string;
+  createdAt: number;
+}
+
+export interface OngoingGameInfo {
+  id: string;
+  mode: GameMode;
+  phase: GamePhase;
+  hostNickname: string;
+  hostAvatar: string;
+  playerCount: number;
+  spectatorCount: number;
+  maxPlayers: number;
+  language: string;
+  currentRound: number;
+  totalRounds: number;
+  createdAt: number;
 }
 
 export interface Handicap {

@@ -7,6 +7,8 @@ import {
   GamePhase,
   GameMode,
   Team,
+  PublicRoomInfo,
+  OngoingGameInfo,
 } from '@doodledraw/shared';
 import {
   ROOM_CODE_LENGTH,
@@ -71,6 +73,7 @@ export class RoomService {
       phase: 'lobby' as GamePhase,
       settings,
       players: new Map<string, Player>([[hostId, host]]),
+      createdAt: Date.now(),
       currentRound: 0,
       currentWord: null,
       wordHint: '',
@@ -310,6 +313,67 @@ export class RoomService {
     const roomId = this.playerRoomMap.get(playerId);
     if (!roomId) return undefined;
     return this.rooms.get(roomId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public rooms
+  // ---------------------------------------------------------------------------
+
+  getPublicRooms(): PublicRoomInfo[] {
+    const result: PublicRoomInfo[] = [];
+    for (const room of this.rooms.values()) {
+      if (!room.settings.isPublic) continue;
+      if (room.phase !== 'lobby') continue;
+
+      const playerCount = Array.from(room.players.values()).filter(
+        (p) => !p.isSpectator,
+      ).length;
+
+      if (playerCount >= room.settings.maxPlayers) continue;
+
+      const host = Array.from(room.players.values()).find((p) => p.isHost);
+
+      result.push({
+        id: room.id,
+        mode: room.mode,
+        hostNickname: host?.nickname ?? 'Unknown',
+        hostAvatar: host?.avatar ?? '',
+        playerCount,
+        maxPlayers: room.settings.maxPlayers,
+        language: room.settings.language,
+        createdAt: room.createdAt,
+      });
+    }
+    return result.sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  getOngoingGames(): OngoingGameInfo[] {
+    const result: OngoingGameInfo[] = [];
+    for (const room of this.rooms.values()) {
+      if (!room.settings.isPublic) continue;
+      if (room.phase === 'lobby' || room.phase === 'game_end') continue;
+
+      const players = Array.from(room.players.values());
+      const activePlayers = players.filter((p) => !p.isSpectator);
+      const spectators = players.filter((p) => p.isSpectator);
+      const host = players.find((p) => p.isHost);
+
+      result.push({
+        id: room.id,
+        mode: room.mode,
+        phase: room.phase,
+        hostNickname: host?.nickname ?? 'Unknown',
+        hostAvatar: host?.avatar ?? '',
+        playerCount: activePlayers.length,
+        spectatorCount: spectators.length,
+        maxPlayers: room.settings.maxPlayers,
+        language: room.settings.language,
+        currentRound: room.currentRound,
+        totalRounds: room.settings.totalRounds,
+        createdAt: room.createdAt,
+      });
+    }
+    return result.sort((a, b) => b.createdAt - a.createdAt);
   }
 
   // ---------------------------------------------------------------------------

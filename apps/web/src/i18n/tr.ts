@@ -8,6 +8,14 @@ export const tr: Translations = {
   // Home
   'home.createRoom': 'Oda Oluştur',
   'home.joinRoom': 'Odaya Katıl',
+  'home.availableRooms': 'Açık Odalar',
+  'home.ongoingGames': 'Devam Eden Oyunlar',
+  'home.createShort': 'Oluştur',
+  'home.joinShort': 'Katıl',
+  'home.availableShort': 'Odalar',
+  'home.ongoingShort': 'Devam',
+  'home.layoutTabs': 'Sekme düzeni',
+  'home.layoutSidebar': 'Yan panel düzeni',
 
   // Create Room
   'create.gameMode': 'Oyun Modu',
@@ -107,6 +115,7 @@ export const tr: Translations = {
   'settings.soundEffects': 'Ses Efektleri',
   'settings.soundOn': 'Ses Açık',
   'settings.soundOff': 'Ses Kapalı',
+  'settings.homeLayout': 'Ana Sayfa Düzeni',
   'settings.standard': 'Standart',
   'settings.medium': 'Orta',
   'settings.large': 'Büyük',
@@ -152,6 +161,32 @@ export const tr: Translations = {
   'game.playerLeft': '{{name}} oyundan ayrıldı',
   'game.returnedToLobby': 'Oyun iptal edildi. Lobiye dönülüyor.',
   'game.playerLeftOk': 'OK',
+
+  // Public Rooms
+  'publicRooms.title': 'Herkese Açık Odalar',
+  'publicRooms.empty': 'Açık oda yok. Bir tane oluştur!',
+  'publicRooms.join': 'Katıl',
+  'publicRooms.players': '{{count}}/{{max}}',
+  'publicRooms.publicRoom': 'Herkese Açık Oda',
+  'publicRooms.publicRoomDesc': 'Herkese açık odalar listesinde görünür',
+
+  // Ongoing Games
+  'ongoingGames.empty': 'Şu anda devam eden oyun yok.',
+  'ongoingGames.spectate': 'İzle',
+  'ongoingGames.round': 'Tur {{current}}/{{total}}',
+  'ongoingGames.players': '{{count}} oyuncu',
+  'ongoingGames.spectators': '{{count}} izleyici',
+  'ongoingGames.phase.selecting_word': 'Seçiliyor',
+  'ongoingGames.phase.drawing': 'Çiziliyor',
+  'ongoingGames.phase.round_end': 'Tur Sonu',
+
+  // Pagination
+  'pagination.prev': 'Önceki',
+  'pagination.next': 'Sonraki',
+  'pagination.page': 'Sayfa {{current}} / {{total}}',
+
+  // Chat (spectator)
+  'chat.spectatorOnly': 'İzleyici sohbeti',
 
   // Theme
   'theme.switchToLight': 'Açık moda geç',

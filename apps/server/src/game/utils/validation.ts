@@ -249,5 +249,12 @@ export function validateSettings(raw: unknown): Partial<RoomSettings> | null {
     }
   }
 
+  if (obj.isPublic !== undefined) {
+    if (typeof obj.isPublic === 'boolean') {
+      result.isPublic = obj.isPublic;
+      hasField = true;
+    }
+  }
+
   return hasField ? result : null;
 }

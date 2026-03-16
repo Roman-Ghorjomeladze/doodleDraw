@@ -106,6 +106,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         room: this.roomService.serializeRoom(room),
       });
 
+      this.broadcastPublicRooms();
+      this.broadcastOngoingGames();
+
       // If the disconnected player was the drawer during a drawing phase,
       // give them a grace period to reconnect before ending the round.
       if (room.phase === 'drawing') {
@@ -175,6 +178,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         roomId: room.id,
         room: this.roomService.serializeRoom(room),
       });
+
+      this.broadcastPublicRooms();
+      this.broadcastOngoingGames();
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
@@ -221,6 +227,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       this.server.to(room.id).emit('room:updated', {
         room: this.roomService.serializeRoom(room),
       });
+
+      this.broadcastPublicRooms();
+      this.broadcastOngoingGames();
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
@@ -259,6 +268,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         room: this.roomService.serializeRoom(room),
       });
     }
+
+    this.broadcastPublicRooms();
+    this.broadcastOngoingGames();
   }
 
   @SubscribeMessage('room:settings')
@@ -299,6 +311,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       this.server.to(room.id).emit('room:updated', {
         room: this.roomService.serializeRoom(room),
       });
+
+      this.broadcastPublicRooms();
+      this.broadcastOngoingGames();
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
@@ -328,6 +343,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       }
 
       await this.gameService.startGame(room.id, this.server);
+
+      this.broadcastPublicRooms();
+      this.broadcastOngoingGames();
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
@@ -495,6 +513,28 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.emitChatToTeam(room, player.team, message);
         return;
       }
+    }
+
+    // Spectator messages only go to other spectators.
+    if (player.isSpectator) {
+      const message: ChatMessage = {
+        id: this.generateMessageId(),
+        playerId: client.id,
+        nickname: player.nickname,
+        text,
+        timestamp: Date.now(),
+        isCorrectGuess: false,
+        isSystemMessage: false,
+        isCloseGuess: false,
+        isSpectatorMessage: true,
+      };
+      this.storeChatMessage(room, message);
+      for (const [id, p] of room.players) {
+        if (p.isSpectator) {
+          this.server.to(id).emit('chat:message', message);
+        }
+      }
+      return;
     }
 
     // Regular chat message.
@@ -674,6 +714,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   }
 
   // ---------------------------------------------------------------------------
+  // Public rooms list
+  // ---------------------------------------------------------------------------
+
+  @SubscribeMessage('rooms:list')
+  handleRoomsList(
+    @ConnectedSocket() client: Socket,
+  ): void {
+    client.emit('rooms:list', { rooms: this.roomService.getPublicRooms() });
+  }
+
+  @SubscribeMessage('rooms:ongoingList')
+  handleOngoingList(
+    @ConnectedSocket() client: Socket,
+  ): void {
+    client.emit('rooms:ongoingList', { rooms: this.roomService.getOngoingGames() });
+  }
+
+  // ---------------------------------------------------------------------------
   // Team events
   // ---------------------------------------------------------------------------
 
@@ -716,6 +774,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
+
+  /** Broadcast the current public rooms list to all connected sockets. */
+  private broadcastPublicRooms(): void {
+    this.server.emit('rooms:updated', { rooms: this.roomService.getPublicRooms() });
+  }
+
+  /** Broadcast the current ongoing games list to all connected sockets. */
+  private broadcastOngoingGames(): void {
+    this.server.emit('rooms:ongoingUpdated', { rooms: this.roomService.getOngoingGames() });
+  }
 
   private generateMessageId(): string {
     return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettingsStore } from '@/stores/settingsStore';
-import type { FontSize, FontFamily, Language } from '@/stores/settingsStore';
+import type { FontSize, FontFamily, Language, HomeLayout } from '@/stores/settingsStore';
 import { useTranslation } from '@/i18n';
 
 interface SettingsPanelProps {
@@ -28,7 +28,7 @@ const fontFamilyOptions: { value: FontFamily; label: string; sample: string }[] 
 ];
 
 export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
-  const { fontSize, fontFamily, soundEnabled, language, setFontSize, setFontFamily, toggleSound, setLanguage } = useSettingsStore();
+  const { fontSize, fontFamily, soundEnabled, language, homeLayout, setFontSize, setFontFamily, toggleSound, setLanguage, setHomeLayout } = useSettingsStore();
   const { t } = useTranslation();
 
   return (
@@ -141,6 +141,42 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                   <span>{soundEnabled ? t('settings.soundOn') : t('settings.soundOff')}</span>
                   <span className="text-lg">{soundEnabled ? '🔊' : '🔇'}</span>
                 </button>
+              </div>
+
+              {/* Home Layout */}
+              <div>
+                <label className="text-sm font-semibold text-surface-600 dark:text-surface-400 mb-2 block">
+                  {t('settings.homeLayout')}
+                </label>
+                <div className="flex gap-2">
+                  {([
+                    { value: 'tabs' as HomeLayout, key: 'home.layoutTabs', icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                      </svg>
+                    )},
+                    { value: 'sidebar' as HomeLayout, key: 'home.layoutSidebar', icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="9" y1="3" x2="9" y2="21" />
+                      </svg>
+                    )},
+                  ]).map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setHomeLayout(opt.value)}
+                      className={`flex-1 py-2 px-3 rounded-button text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                        homeLayout === opt.value
+                          ? 'bg-primary-500 text-white shadow-md'
+                          : 'bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700'
+                      }`}
+                    >
+                      {opt.icon}
+                      {t(opt.key as any)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </motion.div>

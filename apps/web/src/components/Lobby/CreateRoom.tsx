@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useGame } from '@/hooks/useGame';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useTranslation } from '@/i18n';
-import { AVATAR_SEEDS, PERSON_AVATAR_SEEDS } from '@doodledraw/shared';
+import { EXTRA_AVATAR_SEEDS, PERSON_AVATAR_SEEDS } from '@doodledraw/shared';
 import type { GameMode } from '@doodledraw/shared';
 import Avatar from '@/components/Avatar';
 
@@ -11,12 +11,13 @@ export default function CreateRoom() {
   const { nickname, avatar, setNickname, setAvatar } = usePlayerStore();
   const { createRoom } = useGame();
   const [mode, setMode] = useState<GameMode>('classic');
+  const [isPublic, setIsPublic] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const { t } = useTranslation();
 
   const handleCreate = () => {
     if (!nickname.trim()) return;
-    createRoom(mode);
+    createRoom(mode, { isPublic });
   };
 
   return (
@@ -83,19 +84,13 @@ export default function CreateRoom() {
             </motion.button>
           ))}
         </div>
-        <button
-          onClick={() => setShowMore(!showMore)}
-          className="mt-2 text-xs font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
-        >
-          {showMore ? t('create.showLess') : t('create.showMore')}
-        </button>
         {showMore && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             className="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-2"
           >
-            {AVATAR_SEEDS.map(seed => (
+            {EXTRA_AVATAR_SEEDS.map(seed => (
               <motion.button
                 key={seed}
                 whileHover={{ scale: 1.15 }}
@@ -110,7 +105,29 @@ export default function CreateRoom() {
             ))}
           </motion.div>
         )}
+        <button
+          onClick={() => setShowMore(!showMore)}
+          className="mt-2 text-xs font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+        >
+          {showMore ? t('create.showLess') : t('create.showMore')}
+        </button>
       </div>
+
+      {/* Public Room Toggle */}
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isPublic}
+          onChange={e => setIsPublic(e.target.checked)}
+          className="w-4 h-4 rounded accent-primary-500"
+        />
+        <span className="text-sm font-semibold text-surface-600 dark:text-surface-400">
+          {t('publicRooms.publicRoom')}
+        </span>
+        <span className="text-xs text-surface-400 dark:text-surface-500">
+          — {t('publicRooms.publicRoomDesc')}
+        </span>
+      </label>
 
       {/* Create Button */}
       <motion.button

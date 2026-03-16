@@ -23,6 +23,14 @@ export const AVATAR_SEEDS = [
   'sunny', 'cloud', 'blaze', 'frost', 'coral',
 ] as const;
 
+export const EXTRA_AVATAR_SEEDS = [
+  'adventurer:Leo', 'adventurer:Harper', 'adventurer:Miles', 'adventurer:Zara',
+  'adventurer:Quinn', 'adventurer:Felix', 'adventurer:Ivy', 'adventurer:Theo',
+  'adventurer:Luna', 'adventurer:Milo', 'adventurer:Aria', 'adventurer:Oscar',
+  'adventurer:Chloe', 'adventurer:Jasper', 'adventurer:Stella', 'adventurer:Wyatt',
+  'adventurer:Ruby', 'adventurer:Axel', 'adventurer:Nova', 'adventurer:Finn',
+] as const;
+
 export const PERSON_AVATAR_SEEDS = [
   'adventurer:Adrian', 'adventurer:Jade', 'adventurer:Destiny', 'adventurer:Kingston',
   'adventurer:Chase', 'adventurer:Riley', 'adventurer:Maria', 'adventurer:Robert',
@@ -54,6 +62,7 @@ export const DEFAULT_ROOM_SETTINGS = {
   totalRounds: 3,
   hintsEnabled: true,
   redrawEnabled: false,
+  isPublic: false,
   teamAName: 'Team A',
   teamBName: 'Team B',
 };

@@ -4,7 +4,7 @@ import { useGame } from '@/hooks/useGame';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useTranslation } from '@/i18n';
-import { AVATAR_SEEDS, PERSON_AVATAR_SEEDS, ROOM_CODE_LENGTH } from '@doodledraw/shared';
+import { EXTRA_AVATAR_SEEDS, PERSON_AVATAR_SEEDS, ROOM_CODE_LENGTH } from '@doodledraw/shared';
 import Avatar from '@/components/Avatar';
 
 /** Extract room code from URL synchronously at component init. */
@@ -147,19 +147,13 @@ export default function JoinRoom() {
             </motion.button>
           ))}
         </div>
-        <button
-          onClick={() => setShowMore(!showMore)}
-          className="mt-2 text-xs font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
-        >
-          {showMore ? t('create.showLess') : t('create.showMore')}
-        </button>
         {showMore && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             className="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-2"
           >
-            {AVATAR_SEEDS.map(seed => (
+            {EXTRA_AVATAR_SEEDS.map(seed => (
               <motion.button
                 key={seed}
                 whileHover={{ scale: 1.15 }}
@@ -174,6 +168,12 @@ export default function JoinRoom() {
             ))}
           </motion.div>
         )}
+        <button
+          onClick={() => setShowMore(!showMore)}
+          className="mt-2 text-xs font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+        >
+          {showMore ? t('create.showLess') : t('create.showMore')}
+        </button>
       </div>
 
       {/* Join / Spectate Buttons */}

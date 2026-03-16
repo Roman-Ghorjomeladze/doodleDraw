@@ -8,6 +8,14 @@ export const ru: Translations = {
   // Home
   'home.createRoom': 'Создать комнату',
   'home.joinRoom': 'Войти в комнату',
+  'home.availableRooms': 'Доступные комнаты',
+  'home.ongoingGames': 'Текущие игры',
+  'home.createShort': 'Создать',
+  'home.joinShort': 'Войти',
+  'home.availableShort': 'Комнаты',
+  'home.ongoingShort': 'Текущие',
+  'home.layoutTabs': 'Вкладки сверху',
+  'home.layoutSidebar': 'Боковая панель',
 
   // Create Room
   'create.gameMode': 'Режим игры',
@@ -107,6 +115,7 @@ export const ru: Translations = {
   'settings.soundEffects': 'Звуковые эффекты',
   'settings.soundOn': 'Звук включён',
   'settings.soundOff': 'Звук выключен',
+  'settings.homeLayout': 'Макет главной',
   'settings.standard': 'Стандартный',
   'settings.medium': 'Средний',
   'settings.large': 'Большой',
@@ -152,6 +161,32 @@ export const ru: Translations = {
   'game.playerLeft': '{{name}} покинул(а) игру',
   'game.returnedToLobby': 'Игра отменена. Возврат в лобби.',
   'game.playerLeftOk': 'OK',
+
+  // Public Rooms
+  'publicRooms.title': 'Публичные комнаты',
+  'publicRooms.empty': 'Нет доступных комнат. Создайте свою!',
+  'publicRooms.join': 'Войти',
+  'publicRooms.players': '{{count}}/{{max}}',
+  'publicRooms.publicRoom': 'Публичная комната',
+  'publicRooms.publicRoomDesc': 'Видна в списке публичных комнат',
+
+  // Ongoing Games
+  'ongoingGames.empty': 'Сейчас нет активных игр.',
+  'ongoingGames.spectate': 'Наблюдать',
+  'ongoingGames.round': 'Раунд {{current}}/{{total}}',
+  'ongoingGames.players': '{{count}} игроков',
+  'ongoingGames.spectators': '{{count}} зрителей',
+  'ongoingGames.phase.selecting_word': 'Выбор слова',
+  'ongoingGames.phase.drawing': 'Рисование',
+  'ongoingGames.phase.round_end': 'Конец раунда',
+
+  // Pagination
+  'pagination.prev': 'Назад',
+  'pagination.next': 'Далее',
+  'pagination.page': 'Стр. {{current}} из {{total}}',
+
+  // Chat (spectator)
+  'chat.spectatorOnly': 'Чат зрителей',
 
   // Theme
   'theme.switchToLight': 'Переключить на светлый режим',

@@ -13,12 +13,12 @@ export function useGame() {
   // ── Client actions ──────────────────────────────────────────────────
 
   const createRoom = useCallback(
-    (mode: GameMode) => {
+    (mode: GameMode, options?: { isPublic?: boolean }) => {
       const { nickname, avatar } = usePlayerStore.getState();
       const { language } = useSettingsStore.getState();
       emit('room:create', { mode, nickname, avatar });
-      // Apply the user's preferred language from global settings
-      emit('room:settings', { language });
+      // Apply the user's preferred language and public setting
+      emit('room:settings', { language, ...(options?.isPublic != null ? { isPublic: options.isPublic } : {}) });
     },
     [emit],
   );
