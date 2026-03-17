@@ -98,6 +98,9 @@ export const tr: Translations = {
   'score.winner': 'Kazanan!',
   'score.backToHome': 'Ana Sayfaya Dön',
   'score.noPlayers': 'Oyuncu yok',
+  'score.rematch': 'Tekrar Oyna',
+  'score.waitingForPlayers': 'Diğerleri bekleniyor...',
+  'score.rematchStarting': 'Tekrar başlıyor!',
 
   // Tools
   'tool.pen': 'Kalem',

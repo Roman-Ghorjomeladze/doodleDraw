@@ -98,6 +98,9 @@ export const ka: Translations = {
 	'score.winner': 'გამარჯვებული!',
 	'score.backToHome': 'მთავარ გვერდზე დაბრუნება',
 	'score.noPlayers': 'მოთამაშეები არ არიან',
+	'score.rematch': 'რევანში',
+	'score.waitingForPlayers': 'სხვების მოლოდინში...',
+	'score.rematchStarting': 'რევანში იწყება!',
 
 	// Tools
 	'tool.pen': 'კალამი',

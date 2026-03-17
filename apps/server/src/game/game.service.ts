@@ -651,6 +651,14 @@ export class GameService {
       winner = room.teamAScore >= room.teamBScore ? 'A' : 'B';
     }
 
+    // Initialize rematch votes — all eligible (non-spectator, connected) players start as 'pending'.
+    room.rematchVotes = new Map();
+    for (const [id, p] of room.players) {
+      if (!p.isSpectator && p.isConnected) {
+        room.rematchVotes.set(id, 'pending');
+      }
+    }
+
     server.to(room.id).emit('game:end', { finalScores, winner });
     server.to(room.id).emit('game:phaseChange', { phase: 'game_end' });
     server.to(room.id).emit('room:updated', { room: this.roomService.serializeRoom(room) });
@@ -878,6 +886,129 @@ export class GameService {
     server.to(roomId).emit('room:updated', { room: this.roomService.serializeRoom(room) });
 
     this.logger.log(`Room ${roomId} reset to lobby (player left mid-game)`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rematch
+  // ---------------------------------------------------------------------------
+
+  handleRematchVote(
+    playerId: string,
+    vote: 'accepted' | 'declined',
+    server: Server,
+  ): void {
+    const room = this.roomService.getRoomForPlayer(playerId);
+    if (!room || room.phase !== 'game_end') return;
+
+    const player = room.players.get(playerId);
+    if (!player || player.isSpectator) return;
+
+    room.rematchVotes.set(playerId, vote);
+
+    // Build the rematch state to broadcast.
+    const votes: Record<string, 'pending' | 'accepted' | 'declined'> = {};
+    for (const [id, status] of room.rematchVotes) {
+      votes[id] = status;
+    }
+    const totalEligible = Array.from(room.players.values()).filter(
+      (p) => !p.isSpectator && p.isConnected,
+    ).length;
+    const rematchState = { votes, totalEligible };
+
+    server.to(room.id).emit('game:rematchUpdate', { rematchState });
+
+    // Check if all connected non-spectator players voted 'accepted'.
+    const eligiblePlayers = Array.from(room.players.entries()).filter(
+      ([, p]) => !p.isSpectator && p.isConnected,
+    );
+    const allAccepted = eligiblePlayers.every(
+      ([id]) => room.rematchVotes.get(id) === 'accepted',
+    );
+
+    if (allAccepted && eligiblePlayers.length >= 2) {
+      this.startRematch(room, server);
+    }
+  }
+
+  /**
+   * Mark a player who left during game_end as 'declined' in rematch votes.
+   */
+  markRematchDeclined(playerId: string, room: import('@doodledraw/shared').Room, server: Server): void {
+    if (room.phase !== 'game_end') return;
+    if (!room.rematchVotes.has(playerId)) return;
+
+    room.rematchVotes.set(playerId, 'declined');
+
+    const votes: Record<string, 'pending' | 'accepted' | 'declined'> = {};
+    for (const [id, status] of room.rematchVotes) {
+      votes[id] = status;
+    }
+    const totalEligible = Array.from(room.players.values()).filter(
+      (p) => !p.isSpectator && p.isConnected,
+    ).length;
+
+    server.to(room.id).emit('game:rematchUpdate', { rematchState: { votes, totalEligible } });
+
+    // Check if remaining players all accepted.
+    const eligiblePlayers = Array.from(room.players.entries()).filter(
+      ([, p]) => !p.isSpectator && p.isConnected,
+    );
+    const allAccepted = eligiblePlayers.every(
+      ([id]) => room.rematchVotes.get(id) === 'accepted',
+    );
+
+    if (allAccepted && eligiblePlayers.length >= 2) {
+      this.startRematch(room, server);
+    }
+  }
+
+  private startRematch(room: import('@doodledraw/shared').Room, server: Server): void {
+    // Notify clients that rematch is starting.
+    server.to(room.id).emit('game:rematchStart');
+
+    // Reset the game state (same as resetToLobby but keep the room settings).
+    room.phase = 'lobby';
+    room.currentRound = 0;
+    room.currentWord = null;
+    room.wordHint = '';
+    room.drawerId = null;
+    room.teamADrawerId = null;
+    room.teamBDrawerId = null;
+    room.roundStartTime = null;
+    room.correctGuessers = [];
+    room.drawingHistory = [];
+    room.pendingWords = [];
+    room.drawOrder = [];
+    room.drawOrderIndex = 0;
+    room.teamAScore = 0;
+    room.teamBScore = 0;
+    room.lastWinningTeam = null;
+    room.isRedrawRound = false;
+    room.playerWordHistory = new Map();
+    room.chatHistory = [];
+    room.rematchVotes = new Map();
+
+    // Reset player-level game state.
+    for (const [, player] of room.players) {
+      player.score = 0;
+      player.isDrawing = false;
+      player.hasDrawn = false;
+    }
+
+    // Notify everyone of lobby state, then auto-start the game.
+    server.to(room.id).emit('game:phaseChange', { phase: 'lobby' });
+    server.to(room.id).emit('room:updated', { room: this.roomService.serializeRoom(room) });
+
+    // Auto-start the game after a short delay.
+    setTimeout(async () => {
+      try {
+        await this.startGame(room.id, server);
+      } catch (err) {
+        this.logger.error(`Failed to auto-start rematch: ${err}`);
+      }
+    }, 1500);
+
+    this.logger.log(`Rematch starting in room ${room.id}`);
   }
 
   // ---------------------------------------------------------------------------

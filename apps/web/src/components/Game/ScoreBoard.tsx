@@ -1,8 +1,10 @@
 import { motion } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
+import { usePlayerStore } from '@/stores/playerStore';
 import { useGame } from '@/hooks/useGame';
 import { useTranslation } from '@/i18n';
-import type { GameScore } from '@doodledraw/shared';
+import { getAvatarDataUri } from '@/utils/avatars';
+import type { GameScore, RematchStatus } from '@doodledraw/shared';
 
 function TeamPlayerList({
   players,
@@ -53,9 +55,59 @@ function TeamPlayerList({
   );
 }
 
+/** Map rematch vote status to a ring color class */
+function getRematchRingClass(status: RematchStatus | undefined): string {
+  switch (status) {
+    case 'accepted':
+      return 'ring-2 ring-success-500';
+    case 'declined':
+      return 'ring-2 ring-danger-500';
+    case 'pending':
+    default:
+      return 'ring-2 ring-warning-400';
+  }
+}
+
+function RematchAvatars() {
+  const { players, rematchState } = useGameStore();
+  if (!rematchState) return null;
+
+  // Only show non-spectator players
+  const eligiblePlayers = players.filter((p) => !p.isSpectator);
+
+  return (
+    <div className="flex flex-wrap justify-center gap-3 mb-4">
+      {eligiblePlayers.map((player) => {
+        const vote = rematchState.votes[player.id];
+        const ringClass = getRematchRingClass(vote);
+        return (
+          <motion.div
+            key={player.id}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="flex flex-col items-center gap-1"
+          >
+            <div className={`w-10 h-10 rounded-full overflow-hidden ${ringClass}`}>
+              <img
+                src={getAvatarDataUri(player.avatar)}
+                alt={player.nickname}
+                className="w-full h-full"
+              />
+            </div>
+            <span className="text-[10px] text-surface-500 max-w-[60px] truncate text-center">
+              {player.nickname}
+            </span>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ScoreBoard() {
-  const { scores, mode, teamAScore, teamBScore, settings } = useGameStore();
-  const { leaveRoom } = useGame();
+  const { scores, mode, teamAScore, teamBScore, settings, rematchState } = useGameStore();
+  const { isSpectator, playerId: currentPlayerId } = usePlayerStore();
+  const { leaveRoom, rematchVote } = useGame();
   const { t } = useTranslation();
   const teamAName = settings?.teamAName || 'Team A';
   const teamBName = settings?.teamBName || 'Team B';
@@ -77,6 +129,12 @@ export default function ScoreBoard() {
   const teamAIsWinner = teamAScore > teamBScore;
   const teamBIsWinner = teamBScore > teamAScore;
   const isDraw = teamAScore === teamBScore;
+
+  // Determine current player's rematch vote status
+  const myVote = currentPlayerId && rematchState
+    ? rematchState.votes[currentPlayerId]
+    : undefined;
+  const hasVotedRematch = myVote === 'accepted';
 
   return (
     <div className={`${isTeamMode ? 'max-w-2xl' : 'max-w-lg'} mx-auto`}>
@@ -163,14 +221,41 @@ export default function ScoreBoard() {
           </div>
         )}
 
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={leaveRoom}
-          className="w-full py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-button shadow-md transition-all"
-        >
-          {t('score.backToHome')}
-        </motion.button>
+        {/* Rematch section */}
+        {rematchState && <RematchAvatars />}
+
+        {hasVotedRematch && (
+          <p className="text-center text-sm text-surface-500 mb-3">
+            {t('score.waitingForPlayers')}
+          </p>
+        )}
+
+        <div className="flex gap-3">
+          {!isSpectator && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => rematchVote('accepted')}
+              disabled={hasVotedRematch}
+              className={`flex-1 py-3 px-4 font-bold rounded-button shadow-md transition-all text-sm sm:text-base ${
+                hasVotedRematch
+                  ? 'bg-success-500/20 text-success-600 dark:text-success-400 cursor-default'
+                  : 'bg-gradient-to-r from-success-500 to-success-600 text-white'
+              }`}
+            >
+              {hasVotedRematch ? '✓ ' : ''}{t('score.rematch')}
+            </motion.button>
+          )}
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={leaveRoom}
+            className={`${isSpectator ? 'flex-1' : 'flex-1'} py-3 px-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-button shadow-md transition-all text-sm sm:text-base`}
+          >
+            {t('score.backToHome')}
+          </motion.button>
+        </div>
       </motion.div>
     </div>
   );

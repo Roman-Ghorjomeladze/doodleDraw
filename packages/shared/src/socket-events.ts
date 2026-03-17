@@ -10,6 +10,7 @@ import type {
   Handicap,
   PublicRoomInfo,
   OngoingGameInfo,
+  RematchState,
 } from './game-types';
 
 export interface ClientToServerEvents {
@@ -31,6 +32,7 @@ export interface ClientToServerEvents {
   'room:spectate': (data: { roomId: string; nickname: string; avatar: string }) => void;
   'rooms:list': () => void;
   'rooms:ongoingList': () => void;
+  'game:rematchVote': (data: { vote: 'accepted' | 'declined' }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -88,4 +90,6 @@ export interface ServerToClientEvents {
   'rooms:updated': (data: { rooms: PublicRoomInfo[] }) => void;
   'rooms:ongoingList': (data: { rooms: OngoingGameInfo[] }) => void;
   'rooms:ongoingUpdated': (data: { rooms: OngoingGameInfo[] }) => void;
+  'game:rematchUpdate': (data: { rematchState: RematchState }) => void;
+  'game:rematchStart': () => void;
 }

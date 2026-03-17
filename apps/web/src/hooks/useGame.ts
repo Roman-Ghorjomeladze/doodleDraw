@@ -76,6 +76,13 @@ export function useGame() {
     [emit],
   );
 
+  const rematchVote = useCallback(
+    (vote: 'accepted' | 'declined') => {
+      emit('game:rematchVote', { vote });
+    },
+    [emit],
+  );
+
   const switchTeam = useCallback(
     (team: Team) => {
       emit('team:switch', { team });
@@ -99,5 +106,6 @@ export function useGame() {
     updateSettings,
     switchTeam,
     spectateRoom,
+    rematchVote,
   };
 }

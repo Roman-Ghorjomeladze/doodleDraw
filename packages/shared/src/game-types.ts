@@ -60,6 +60,14 @@ export interface Room {
   isRedrawRound: boolean;
   playerWordHistory: Map<string, string[]>;
   chatHistory: ChatMessage[];
+  rematchVotes: Map<string, RematchStatus>;
+}
+
+export type RematchStatus = 'pending' | 'accepted' | 'declined';
+
+export interface RematchState {
+  votes: Record<string, RematchStatus>;
+  totalEligible: number;
 }
 
 export interface SerializedRoom {
@@ -78,6 +86,7 @@ export interface SerializedRoom {
   teamAScore: number;
   teamBScore: number;
   isRedrawRound: boolean;
+  rematchState?: RematchState;
 }
 
 export interface DrawAction {

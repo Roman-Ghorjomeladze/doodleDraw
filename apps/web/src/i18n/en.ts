@@ -96,6 +96,9 @@ export const en = {
 	'score.winner': 'Winner!',
 	'score.backToHome': 'Back to Home',
 	'score.noPlayers': 'No players',
+	'score.rematch': 'Rematch',
+	'score.waitingForPlayers': 'Waiting for others...',
+	'score.rematchStarting': 'Rematch starting!',
 
 	// Tools
 	'tool.pen': 'Pen',

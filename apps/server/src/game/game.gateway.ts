@@ -102,8 +102,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     const room = this.roomService.handleDisconnect(client.id);
     if (room) {
-      // If the game already ended, silently clean up — no notifications needed.
-      if (room.phase === 'game_end') return;
+      // If the game already ended, update rematch state for the disconnected player.
+      if (room.phase === 'game_end') {
+        // Note: handleDisconnect already marked isConnected = false.
+        // We don't mark as declined on disconnect — they might reconnect.
+        // Only explicit leave marks as declined.
+        this.server.to(room.id).emit('room:updated', {
+          room: this.roomService.serializeRoom(room),
+        });
+        return;
+      }
 
       this.server.to(room.id).emit('room:updated', {
         room: this.roomService.serializeRoom(room),
@@ -258,8 +266,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     await client.leave(room.id);
 
-    // If the game already ended, silently remove — no notifications or lobby reset.
+    // If the game already ended, mark as declined in rematch and update.
     if (gameFinished) {
+      this.gameService.markRematchDeclined(client.id, room, this.server);
       this.server.to(room.id).emit('room:updated', {
         room: this.roomService.serializeRoom(room),
       });
@@ -433,6 +442,25 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rematch
+  // ---------------------------------------------------------------------------
+
+  @SubscribeMessage('game:rematchVote')
+  handleRematchVote(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { vote: 'accepted' | 'declined' },
+  ): void {
+    if (this.throttle(client, 'game:rematchVote')) return;
+
+    if (data?.vote !== 'accepted' && data?.vote !== 'declined') {
+      client.emit('room:error', { message: 'Invalid vote' });
+      return;
+    }
+
+    this.gameService.handleRematchVote(client.id, data.vote, this.server);
   }
 
   // ---------------------------------------------------------------------------

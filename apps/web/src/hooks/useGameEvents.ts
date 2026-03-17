@@ -116,6 +116,11 @@ export function useGameEvents() {
         });
         const isHost = room.players.find((p) => p.id === currentPlayerId)?.isHost ?? state.isHost;
         useGameStore.setState({ isHost, settings: room.settings });
+
+        // Sync rematch state from room update (initial state after game:end)
+        if (room.rematchState) {
+          useGameStore.getState().setRematchState(room.rematchState);
+        }
       }),
     );
 
@@ -212,8 +217,21 @@ export function useGameEvents() {
     unsubscribers.push(
       on('game:end', ({ finalScores }) => {
         useGameStore.getState().setScores(finalScores);
+        useGameStore.getState().setRematchState(null);
         useDrawingStore.getState().reset();
         playSound('gameEnd');
+      }),
+    );
+
+    unsubscribers.push(
+      on('game:rematchUpdate', ({ rematchState }) => {
+        useGameStore.getState().setRematchState(rematchState);
+      }),
+    );
+
+    unsubscribers.push(
+      on('game:rematchStart', () => {
+        useGameStore.getState().setRematchState(null);
       }),
     );
 

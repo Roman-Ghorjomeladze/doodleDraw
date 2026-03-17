@@ -6,6 +6,7 @@ import type {
   ChatMessage,
   GameScore,
   RoomSettings,
+  RematchState,
 } from '@doodledraw/shared';
 
 interface GameState {
@@ -33,6 +34,7 @@ interface GameState {
   countdownSeconds: number | null;
   pendingRoomId: string | null;
   playerLeftNotice: string | null;
+  rematchState: RematchState | null;
 }
 
 interface GameActions {
@@ -67,6 +69,7 @@ interface GameActions {
   setCountdownSeconds: (seconds: number | null) => void;
   setPendingRoomId: (roomId: string | null) => void;
   setPlayerLeftNotice: (notice: string | null) => void;
+  setRematchState: (state: RematchState | null) => void;
   reset: () => void;
 }
 
@@ -97,6 +100,7 @@ const initialState: GameState = {
   countdownSeconds: null,
   pendingRoomId: null,
   playerLeftNotice: null,
+  rematchState: null,
 };
 
 export const useGameStore = create<GameStore>()((set) => ({
@@ -166,6 +170,8 @@ export const useGameStore = create<GameStore>()((set) => ({
   setPendingRoomId: (pendingRoomId) => set({ pendingRoomId }),
 
   setPlayerLeftNotice: (playerLeftNotice) => set({ playerLeftNotice }),
+
+  setRematchState: (rematchState) => set({ rematchState }),
 
   reset: () => {
     sessionStorage.removeItem('doodledraw_roomId');

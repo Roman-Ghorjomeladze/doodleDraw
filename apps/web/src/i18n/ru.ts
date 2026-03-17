@@ -98,6 +98,9 @@ export const ru: Translations = {
   'score.winner': 'Победитель!',
   'score.backToHome': 'На главную',
   'score.noPlayers': 'Нет игроков',
+  'score.rematch': 'Реванш',
+  'score.waitingForPlayers': 'Ждём остальных...',
+  'score.rematchStarting': 'Реванш начинается!',
 
   // Tools
   'tool.pen': 'Кисть',

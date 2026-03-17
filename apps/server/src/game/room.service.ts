@@ -92,6 +92,7 @@ export class RoomService {
       isRedrawRound: false,
       playerWordHistory: new Map(),
       chatHistory: [],
+      rematchVotes: new Map(),
     };
 
     this.rooms.set(roomId, room);
@@ -306,6 +307,13 @@ export class RoomService {
       room.playerWordHistory.set(newPlayerId, wordHistory);
     }
 
+    // Transfer rematch votes.
+    const rematchVote = room.rematchVotes.get(oldPlayerId);
+    if (rematchVote !== undefined) {
+      room.rematchVotes.delete(oldPlayerId);
+      room.rematchVotes.set(newPlayerId, rematchVote);
+    }
+
     this.cancelCleanup(roomId);
 
     this.logger.log(`Player ${player.nickname} reconnected: ${oldPlayerId} → ${newPlayerId} in room ${roomId}`);
@@ -411,7 +419,7 @@ export class RoomService {
   // ---------------------------------------------------------------------------
 
   serializeRoom(room: Room): SerializedRoom {
-    return {
+    const serialized: SerializedRoom = {
       id: room.id,
       mode: room.mode,
       phase: room.phase,
@@ -428,6 +436,20 @@ export class RoomService {
       teamBScore: room.teamBScore,
       isRedrawRound: room.isRedrawRound,
     };
+
+    // Include rematch state only during game_end phase.
+    if (room.phase === 'game_end' && room.rematchVotes.size > 0) {
+      const votes: Record<string, 'pending' | 'accepted' | 'declined'> = {};
+      for (const [id, status] of room.rematchVotes) {
+        votes[id] = status;
+      }
+      const totalEligible = Array.from(room.players.values()).filter(
+        (p) => !p.isSpectator && p.isConnected,
+      ).length;
+      serialized.rematchState = { votes, totalEligible };
+    }
+
+    return serialized;
   }
 
   // ---------------------------------------------------------------------------

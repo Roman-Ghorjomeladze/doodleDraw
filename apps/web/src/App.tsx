@@ -39,10 +39,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-50 transition-colors duration-300">
+    <div className="h-dvh flex flex-col bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-50 transition-colors duration-300 overflow-hidden">
       <Header />
       <ConnectionStatus />
-      <main className="container mx-auto px-2 sm:px-4 py-2 sm:py-6">
+      <main className="flex-1 overflow-y-auto container mx-auto px-2 sm:px-4 py-2 sm:py-6 w-full">
         {!roomId && <HomePage />}
         {roomId && phase === 'lobby' && <RoomLobby />}
         {roomId && phase !== 'lobby' && <GameRoom />}
