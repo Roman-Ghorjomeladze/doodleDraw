@@ -132,18 +132,18 @@ export default function JoinRoom() {
         <label className="text-sm font-semibold text-surface-600 dark:text-surface-400 mb-2 block">
           {t('create.avatar')}
         </label>
-        <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-10 gap-2 justify-items-center">
           {AVATAR_SEEDS.map(seed => (
             <motion.button
               key={seed}
               whileHover={{ scale: 1.15 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setAvatar(seed)}
-              className={`aspect-square rounded-full transition-all p-0.5 ${
+              className={`w-9 h-9 rounded-full transition-all p-0.5 ${
                 avatar === seed ? 'ring-2 ring-offset-2 ring-primary-500 bg-primary-100 dark:bg-primary-900/30' : ''
               }`}
             >
-              <Avatar seed={seed} size={36} className="w-full h-full" />
+              <Avatar seed={seed} size={32} className="w-full h-full" />
             </motion.button>
           ))}
         </div>
@@ -151,7 +151,7 @@ export default function JoinRoom() {
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-2"
+            className="grid grid-cols-4 sm:grid-cols-10 gap-2 justify-items-center mt-2"
           >
             {EXTRA_AVATAR_SEEDS.map(seed => (
               <motion.button
@@ -159,11 +159,11 @@ export default function JoinRoom() {
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setAvatar(seed)}
-                className={`aspect-square rounded-full transition-all p-0.5 ${
+                className={`w-9 h-9 rounded-full transition-all p-0.5 ${
                   avatar === seed ? 'ring-2 ring-offset-2 ring-primary-500 bg-primary-100 dark:bg-primary-900/30' : ''
                 }`}
               >
-                <Avatar seed={seed} size={36} className="w-full h-full" />
+                <Avatar seed={seed} size={32} className="w-full h-full" />
               </motion.button>
             ))}
           </motion.div>

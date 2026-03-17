@@ -118,6 +118,7 @@ export const ru: Translations = {
   'settings.soundEffects': 'Звуковые эффекты',
   'settings.soundOn': 'Звук включён',
   'settings.soundOff': 'Звук выключен',
+  'settings.theme': 'Тема',
   'settings.homeLayout': 'Макет главной',
   'settings.standard': 'Стандартный',
   'settings.medium': 'Средний',

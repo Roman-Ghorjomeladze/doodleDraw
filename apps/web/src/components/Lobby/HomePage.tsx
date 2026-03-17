@@ -8,7 +8,6 @@ import JoinRoom from './JoinRoom';
 import AvailableRooms from './AvailableRooms';
 import OngoingGames from './OngoingGames';
 import AnimatedLogo from '@/components/UI/AnimatedLogo';
-import RulesModal from '@/components/RulesModal';
 
 type Tab = 'create' | 'join' | 'available' | 'ongoing';
 
@@ -114,7 +113,6 @@ function hasRoomCodeInUrl(): boolean {
 
 export default function HomePage() {
 	const [tab, setTab] = useState<Tab>(() => (hasRoomCodeInUrl() ? 'join' : 'create'));
-	const [showRules, setShowRules] = useState(false);
 	const { roomId } = useGameStore();
 	const { homeLayout } = useSettingsStore();
 	const { t } = useTranslation();
@@ -154,33 +152,6 @@ export default function HomePage() {
 				<p className='text-surface-500 dark:text-surface-400'>{t('app.subtitle')}</p>
 			</motion.div>
 
-			{/* How to Play - shown inline on mobile, below logo on desktop */}
-			<div className='flex justify-end sm:justify-center mb-2 sm:mb-4'>
-				<button
-					onClick={() => setShowRules(true)}
-					className='inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors'
-				>
-					<svg
-						xmlns='http://www.w3.org/2000/svg'
-						width='16'
-						height='16'
-						viewBox='0 0 24 24'
-						fill='none'
-						stroke='currentColor'
-						strokeWidth='2'
-						strokeLinecap='round'
-						strokeLinejoin='round'
-					>
-						<circle cx='12' cy='12' r='10' />
-						<path d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3' />
-						<path d='M12 17h.01' />
-					</svg>
-					{t('rules.howToPlay')}
-				</button>
-			</div>
-
-			<AnimatePresence>{showRules && <RulesModal onClose={() => setShowRules(false)} />}</AnimatePresence>
-
 			<div className='bg-white dark:bg-surface-800 rounded-card shadow-game-lg overflow-hidden'>
 				{isSidebar ? (
 					/* ── Sidebar layout ── */
@@ -203,7 +174,7 @@ export default function HomePage() {
 							))}
 						</div>
 
-						<div className='flex-1 p-6 overflow-y-auto'>{renderTabContent()}</div>
+						<div className='flex-1 p-4 sm:p-6 overflow-y-auto'>{renderTabContent()}</div>
 					</div>
 				) : (
 					/* ── Tabs layout ── */

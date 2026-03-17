@@ -116,6 +116,7 @@ export const en = {
 	'settings.soundEffects': 'Sound Effects',
 	'settings.soundOn': 'Sound On',
 	'settings.soundOff': 'Sound Off',
+	'settings.theme': 'Theme',
 	'settings.homeLayout': 'Home Layout',
 	'settings.standard': 'Standard',
 	'settings.medium': 'Medium',

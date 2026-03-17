@@ -118,6 +118,7 @@ export const tr: Translations = {
   'settings.soundEffects': 'Ses Efektleri',
   'settings.soundOn': 'Ses Açık',
   'settings.soundOff': 'Ses Kapalı',
+  'settings.theme': 'Tema',
   'settings.homeLayout': 'Ana Sayfa Düzeni',
   'settings.standard': 'Standart',
   'settings.medium': 'Orta',

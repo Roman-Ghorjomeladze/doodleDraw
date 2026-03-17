@@ -3,10 +3,10 @@ import { AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
 import { useGame } from '@/hooks/useGame';
 import { useTranslation } from '@/i18n';
-import ThemeToggle from './ThemeToggle';
 import SettingsPanel from './SettingsPanel';
 import AnimatedLogo from '@/components/UI/AnimatedLogo';
 import ConfirmModal from '@/components/UI/ConfirmModal';
+import RulesModal from '@/components/RulesModal';
 
 export default function Header() {
   const { roomId, phase } = useGameStore();
@@ -14,6 +14,7 @@ export default function Header() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showRules, setShowRules] = useState(false);
   const { t } = useTranslation();
 
   return (
@@ -43,8 +44,22 @@ export default function Header() {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+          <div className="flex items-center gap-1">
+            {/* How to Play — only on home screen */}
+            {!roomId && (
+              <button
+                onClick={() => setShowRules(true)}
+                className="p-2 rounded-button hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-primary-600 dark:text-primary-400"
+                aria-label={t('rules.howToPlay')}
+                title={t('rules.howToPlay')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                  <path d="M12 17h.01" />
+                </svg>
+              </button>
+            )}
             <button
               onClick={() => setSettingsOpen(true)}
               className="p-2 rounded-button hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
@@ -60,6 +75,7 @@ export default function Header() {
       </header>
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <AnimatePresence>
+        {showRules && <RulesModal onClose={() => setShowRules(false)} />}
         {showLeaveConfirm && (
           <ConfirmModal
             title={t('lobby.leaveConfirmTitle')}

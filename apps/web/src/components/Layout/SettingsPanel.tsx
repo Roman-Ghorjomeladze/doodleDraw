@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import type { FontSize, FontFamily, Language, HomeLayout } from '@/stores/settingsStore';
 import { useTranslation } from '@/i18n';
+import ThemeToggle from './ThemeToggle';
 
 interface SettingsPanelProps {
   open: boolean;
@@ -123,6 +124,14 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Theme */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-surface-600 dark:text-surface-400">
+                  {t('settings.theme')}
+                </label>
+                <ThemeToggle />
               </div>
 
               {/* Sound Toggle */}

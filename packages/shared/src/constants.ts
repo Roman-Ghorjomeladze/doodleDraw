@@ -21,10 +21,10 @@ export const AVATAR_SEEDS = [
   'adventurer:Chase', 'adventurer:Riley', 'adventurer:Maria', 'adventurer:Robert',
   'adventurer:Sophia', 'adventurer:Vivian', 'adventurer:Sadie', 'adventurer:George',
   'adventurer:Amaya', 'adventurer:Easton', 'adventurer:Liliana', 'adventurer:Nolan',
-  'adventurer:Eden', 'adventurer:Caleb', 'adventurer:Valentina', 'adventurer:Oliver',
 ] as const;
 
 export const EXTRA_AVATAR_SEEDS = [
+  'adventurer:Eden', 'adventurer:Caleb', 'adventurer:Valentina', 'adventurer:Oliver',
   'adventurer:Leo', 'adventurer:Harper', 'adventurer:Miles', 'adventurer:Zara',
   'adventurer:Quinn', 'adventurer:Felix', 'adventurer:Ivy', 'adventurer:Theo',
   'adventurer:Luna', 'adventurer:Milo', 'adventurer:Aria', 'adventurer:Oscar',
