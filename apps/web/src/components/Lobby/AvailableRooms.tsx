@@ -124,10 +124,10 @@ export default function AvailableRooms() {
             <Avatar seed={room.hostAvatar} size={36} />
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm truncate">
-                  {room.hostNickname}
-                </span>
+              <span className="font-semibold text-sm block truncate">
+                {room.hostNickname}
+              </span>
+              <div className="flex items-center gap-2 mt-0.5">
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
                     room.mode === 'classic'
@@ -137,12 +137,12 @@ export default function AvailableRooms() {
                 >
                   {room.mode === 'classic' ? t('create.classic') : t('create.teamBattle')}
                 </span>
-              </div>
-              <div className="text-xs text-surface-500 dark:text-surface-400">
-                {t('publicRooms.players', {
-                  count: String(room.playerCount),
-                  max: String(room.maxPlayers),
-                })} {t('lobby.players').toLowerCase()}
+                <span className="text-xs text-surface-500 dark:text-surface-400">
+                  {t('publicRooms.players', {
+                    count: String(room.playerCount),
+                    max: String(room.maxPlayers),
+                  })}
+                </span>
               </div>
             </div>
 

@@ -55,7 +55,7 @@ export default function TeamMode() {
 	}
 
 	return (
-		<div className='max-w-7xl mx-auto'>
+		<div className='max-w-7xl mx-auto game-area'>
 			{/* Word Selection Modal */}
 			<AnimatePresence>
 				{phase === 'selecting_word' && isDrawer && wordOptions.length > 0 && (
@@ -144,14 +144,16 @@ export default function TeamMode() {
 				<div className='grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4'>
 					<div className='space-y-3'>
 						{/* Top Bar */}
-						<div className='flex items-center justify-between bg-white dark:bg-surface-800 rounded-card shadow-game px-4 py-2'>
-							<div className='text-sm text-surface-500'>{t('game.round', { number: currentRound })}</div>
+						<div className='flex items-center bg-white dark:bg-surface-800 rounded-card shadow-game px-3 sm:px-4 py-2 gap-2 overflow-hidden'>
+							<div className='text-xs sm:text-sm text-surface-500 whitespace-nowrap flex-shrink-0'>{t('game.round', { number: currentRound })}</div>
 							<WordDisplay
 								hint={wordHint}
 								word={isDrawer ? currentWord || '' : undefined}
 								isDrawer={isDrawer}
 							/>
-							<Timer timeLeft={timeLeft} />
+							<div className='flex-shrink-0'>
+								<Timer timeLeft={timeLeft} />
+							</div>
 						</div>
 
 						{/* Canvas Area — own team large, opponent PiP in corner */}

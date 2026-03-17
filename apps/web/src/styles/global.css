@@ -67,15 +67,37 @@
 [data-font-size="medium"] { font-size: 18px; }
 [data-font-size="large"] { font-size: 20px; }
 
-/* Prevent iOS overscroll bounce and unwanted page-level scrolling */
+/* Prevent iOS overscroll bounce and unwanted page-level scrolling.
+   Set background on html/body so the area behind the iOS keyboard matches the app. */
 html, body {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+  background-color: var(--color-surface-50);
+}
+
+.dark, .dark body {
+  background-color: var(--color-surface-950);
+}
+
+/* Prevent text selection and callout menus during gameplay on mobile */
+.game-area {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Prevent focus-driven scroll on phase transitions */
 *:focus {
   scroll-margin: 0;
+  scroll-padding: 0;
+}
+
+/* Prevent iOS auto-scroll on focus for inputs inside game area */
+.game-area input,
+.game-area textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  font-size: 16px; /* Prevents iOS zoom on input focus */
 }
 
 /* Selection color */

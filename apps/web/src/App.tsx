@@ -42,7 +42,7 @@ export default function App() {
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-50 transition-colors duration-300">
       <Header />
       <ConnectionStatus />
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-2 sm:px-4 py-2 sm:py-6">
         {!roomId && <HomePage />}
         {roomId && phase === 'lobby' && <RoomLobby />}
         {roomId && phase !== 'lobby' && <GameRoom />}

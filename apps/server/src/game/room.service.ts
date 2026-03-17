@@ -242,6 +242,17 @@ export class RoomService {
     player.isConnected = false;
     this.logger.log(`Player ${player.nickname} (${playerId}) disconnected from room ${roomId}`);
 
+    // If the disconnected player was the host, transfer host to the next connected player.
+    // This ensures someone can still start/manage the room while the host is away.
+    if (player.isHost) {
+      const nextHost = this.findNextHost(room);
+      if (nextHost) {
+        player.isHost = false;
+        nextHost.isHost = true;
+        this.logger.log(`Host migrated from disconnected ${player.nickname} to ${nextHost.nickname} in room ${roomId}`);
+      }
+    }
+
     // If all players are disconnected, schedule room cleanup.
     const anyConnected = Array.from(room.players.values()).some((p) => p.isConnected);
     if (!anyConnected) {
@@ -450,7 +461,13 @@ export class RoomService {
   }
 
   private findNextHost(room: Room): Player | null {
-    // Pick the first connected player.
+    // Prefer a connected non-spectator player first.
+    for (const [, player] of room.players) {
+      if (player.isConnected && !player.isSpectator) {
+        return player;
+      }
+    }
+    // Fall back to any connected player (including spectators).
     for (const [, player] of room.players) {
       if (player.isConnected) {
         return player;

@@ -145,15 +145,20 @@ export default function HomePage() {
 	};
 
 	return (
-		<div className={`mx-auto mt-8 ${isSidebar ? 'max-w-[44rem]' : 'max-w-[29.5rem]'}`}>
-			<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className='text-center mb-8'>
+		<div className={`mx-auto mt-2 sm:mt-8 ${isSidebar ? 'max-w-[44rem]' : 'max-w-[29.5rem]'}`}>
+			{/* Logo section - hidden on mobile to save space */}
+			<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className='text-center mb-4 sm:mb-8 hidden sm:block'>
 				<h2 className='mb-2'>
 					<AnimatedLogo text={t('app.title')} size='lg' animationKey={roomId ?? 'home'} />
 				</h2>
 				<p className='text-surface-500 dark:text-surface-400'>{t('app.subtitle')}</p>
+			</motion.div>
+
+			{/* How to Play - shown inline on mobile, below logo on desktop */}
+			<div className='flex justify-end sm:justify-center mb-2 sm:mb-4'>
 				<button
 					onClick={() => setShowRules(true)}
-					className='mt-3 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors'
+					className='inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors'
 				>
 					<svg
 						xmlns='http://www.w3.org/2000/svg'
@@ -172,7 +177,7 @@ export default function HomePage() {
 					</svg>
 					{t('rules.howToPlay')}
 				</button>
-			</motion.div>
+			</div>
 
 			<AnimatePresence>{showRules && <RulesModal onClose={() => setShowRules(false)} />}</AnimatePresence>
 
