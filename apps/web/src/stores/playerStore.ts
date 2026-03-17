@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { PERSON_AVATAR_SEEDS } from '@doodledraw/shared';
+import { AVATAR_SEEDS } from '@doodledraw/shared';
 
 interface PlayerState {
   nickname: string;
@@ -22,7 +22,7 @@ export const usePlayerStore = create<PlayerStore>()(
   persist(
     (set) => ({
       nickname: '',
-      avatar: PERSON_AVATAR_SEEDS[Math.floor(Math.random() * PERSON_AVATAR_SEEDS.length)],
+      avatar: AVATAR_SEEDS[Math.floor(Math.random() * AVATAR_SEEDS.length)],
       playerId: null,
       isSpectator: false,
 
@@ -42,14 +42,14 @@ export const usePlayerStore = create<PlayerStore>()(
         if (version === 0) {
           // Migrate from avatarColor to avatar
           if (state.avatarColor && !state.avatar) {
-            state.avatar = PERSON_AVATAR_SEEDS[Math.floor(Math.random() * PERSON_AVATAR_SEEDS.length)];
+            state.avatar = AVATAR_SEEDS[Math.floor(Math.random() * AVATAR_SEEDS.length)];
           }
           delete state.avatarColor;
         }
         if (version < 2) {
           // Migrate from funEmoji avatars to adventurer avatars
           if (state.avatar && !state.avatar.startsWith('adventurer:')) {
-            state.avatar = PERSON_AVATAR_SEEDS[Math.floor(Math.random() * PERSON_AVATAR_SEEDS.length)];
+            state.avatar = AVATAR_SEEDS[Math.floor(Math.random() * AVATAR_SEEDS.length)];
           }
         }
         return persisted;

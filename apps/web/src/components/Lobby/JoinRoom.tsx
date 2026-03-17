@@ -4,7 +4,7 @@ import { useGame } from '@/hooks/useGame';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useTranslation } from '@/i18n';
-import { EXTRA_AVATAR_SEEDS, PERSON_AVATAR_SEEDS, ROOM_CODE_LENGTH } from '@doodledraw/shared';
+import { AVATAR_SEEDS, EXTRA_AVATAR_SEEDS, ROOM_CODE_LENGTH } from '@doodledraw/shared';
 import Avatar from '@/components/Avatar';
 
 /** Extract room code from URL synchronously at component init. */
@@ -133,17 +133,17 @@ export default function JoinRoom() {
           {t('create.avatar')}
         </label>
         <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-          {PERSON_AVATAR_SEEDS.map(seed => (
+          {AVATAR_SEEDS.map(seed => (
             <motion.button
               key={seed}
               whileHover={{ scale: 1.15 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setAvatar(seed)}
-              className={`rounded-full transition-all p-0.5 ${
+              className={`aspect-square rounded-full transition-all p-0.5 ${
                 avatar === seed ? 'ring-2 ring-offset-2 ring-primary-500 bg-primary-100 dark:bg-primary-900/30' : ''
               }`}
             >
-              <Avatar seed={seed} size={36} />
+              <Avatar seed={seed} size={36} className="w-full h-full" />
             </motion.button>
           ))}
         </div>
@@ -159,11 +159,11 @@ export default function JoinRoom() {
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setAvatar(seed)}
-                className={`rounded-full transition-all p-0.5 ${
+                className={`aspect-square rounded-full transition-all p-0.5 ${
                   avatar === seed ? 'ring-2 ring-offset-2 ring-primary-500 bg-primary-100 dark:bg-primary-900/30' : ''
                 }`}
               >
-                <Avatar seed={seed} size={36} />
+                <Avatar seed={seed} size={36} className="w-full h-full" />
               </motion.button>
             ))}
           </motion.div>

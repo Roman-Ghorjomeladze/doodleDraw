@@ -208,9 +208,11 @@ export class RoomService {
     room.players.delete(playerId);
     this.playerRoomMap.delete(playerId);
 
-    // If room is now empty, schedule cleanup.
+    // If room is now empty, delete it immediately.
     if (room.players.size === 0) {
-      this.scheduleCleanup(roomId);
+      this.cancelCleanup(roomId);
+      this.rooms.delete(roomId);
+      this.logger.log(`Room ${roomId} deleted (all players left)`);
       return { room, wasHost };
     }
 
@@ -344,9 +346,11 @@ export class RoomService {
       if (!room.settings.isPublic) continue;
       if (room.phase !== 'lobby') continue;
 
-      const playerCount = Array.from(room.players.values()).filter(
-        (p) => !p.isSpectator,
-      ).length;
+      const players = Array.from(room.players.values());
+      const hasConnected = players.some((p) => p.isConnected);
+      if (!hasConnected) continue;
+
+      const playerCount = players.filter((p) => !p.isSpectator).length;
 
       if (playerCount >= room.settings.maxPlayers) continue;
 
@@ -373,6 +377,9 @@ export class RoomService {
       if (room.phase === 'lobby' || room.phase === 'game_end') continue;
 
       const players = Array.from(room.players.values());
+      const hasConnected = players.some((p) => p.isConnected);
+      if (!hasConnected) continue;
+
       const activePlayers = players.filter((p) => !p.isSpectator);
       const spectators = players.filter((p) => p.isSpectator);
       const host = players.find((p) => p.isHost);

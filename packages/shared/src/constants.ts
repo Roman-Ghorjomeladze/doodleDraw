@@ -17,10 +17,11 @@ export const DRAWING_COLORS = [
 export const BRUSH_SIZES = [2, 5, 10, 20, 40] as const;
 
 export const AVATAR_SEEDS = [
-  'felix', 'aneka', 'milo', 'jasper', 'coco',
-  'luna', 'ziggy', 'poppy', 'biscuit', 'pepper',
-  'olive', 'mango', 'kiwi', 'cherry', 'hazel',
-  'sunny', 'cloud', 'blaze', 'frost', 'coral',
+  'adventurer:Adrian', 'adventurer:Jade', 'adventurer:Destiny', 'adventurer:Kingston',
+  'adventurer:Chase', 'adventurer:Riley', 'adventurer:Maria', 'adventurer:Robert',
+  'adventurer:Sophia', 'adventurer:Vivian', 'adventurer:Sadie', 'adventurer:George',
+  'adventurer:Amaya', 'adventurer:Easton', 'adventurer:Liliana', 'adventurer:Nolan',
+  'adventurer:Eden', 'adventurer:Caleb', 'adventurer:Valentina', 'adventurer:Oliver',
 ] as const;
 
 export const EXTRA_AVATAR_SEEDS = [
@@ -29,14 +30,6 @@ export const EXTRA_AVATAR_SEEDS = [
   'adventurer:Luna', 'adventurer:Milo', 'adventurer:Aria', 'adventurer:Oscar',
   'adventurer:Chloe', 'adventurer:Jasper', 'adventurer:Stella', 'adventurer:Wyatt',
   'adventurer:Ruby', 'adventurer:Axel', 'adventurer:Nova', 'adventurer:Finn',
-] as const;
-
-export const PERSON_AVATAR_SEEDS = [
-  'adventurer:Adrian', 'adventurer:Jade', 'adventurer:Destiny', 'adventurer:Kingston',
-  'adventurer:Chase', 'adventurer:Riley', 'adventurer:Maria', 'adventurer:Robert',
-  'adventurer:Sophia', 'adventurer:Vivian', 'adventurer:Sadie', 'adventurer:George',
-  'adventurer:Amaya', 'adventurer:Easton', 'adventurer:Liliana', 'adventurer:Nolan',
-  'adventurer:Eden', 'adventurer:Caleb', 'adventurer:Valentina', 'adventurer:Oliver',
 ] as const;
 
 export const TEAM_NAME_PAIRS: [string, string][] = [
