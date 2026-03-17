@@ -28,7 +28,7 @@ const VALID_LANGUAGES = ['en', 'ka', 'tr', 'ru'];
 const VALID_DIFFICULTIES = [1, 2, 3];
 const VALID_ROUND_TIMES = [60, 80, 100, 120];
 const VALID_TOTAL_ROUNDS = [3, 5, 8, 13];
-const MAX_MAX_PLAYERS = 12;
+const MAX_MAX_PLAYERS = 16;
 const MIN_MAX_PLAYERS = 2;
 
 // ---------------------------------------------------------------------------

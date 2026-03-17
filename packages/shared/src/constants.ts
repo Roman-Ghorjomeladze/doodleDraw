@@ -1,7 +1,7 @@
 export const ROOM_CODE_LENGTH = 6;
 export const MIN_PLAYERS_CLASSIC = 2;
 export const MIN_PLAYERS_TEAM = 4;
-export const MAX_PLAYERS = 12;
+export const MAX_PLAYERS = 16;
 export const DEFAULT_ROUND_TIME = 80;
 export const WORD_OPTIONS_COUNT = 3;
 export const HINT_REVEAL_INTERVAL = 20;
@@ -48,7 +48,7 @@ export const TEAM_NAME_PAIRS: [string, string][] = [
 ];
 
 export const DEFAULT_ROOM_SETTINGS = {
-  maxPlayers: 8,
+  maxPlayers: 16,
   roundTime: 80,
   language: 'en',
   difficulty: 1 as const,

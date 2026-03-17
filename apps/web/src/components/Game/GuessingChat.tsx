@@ -19,9 +19,11 @@ interface GuessingChatProps {
   showAvatars?: boolean;
   /** Show close button in header; called when user clicks it */
   onClose?: () => void;
+  /** Props to spread on the header for drag-to-dismiss */
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
-export default function GuessingChat({ isDrawer, isLobby, invertLayout, onExpand, bottomAligned, showAvatars, onClose }: GuessingChatProps) {
+export default function GuessingChat({ isDrawer, isLobby, invertLayout, onExpand, bottomAligned, showAvatars, onClose, dragHandleProps }: GuessingChatProps) {
   const { messages, players } = useGameStore();
   const { isSpectator } = usePlayerStore();
   const { sendGuess } = useGame();
@@ -146,7 +148,7 @@ export default function GuessingChat({ isDrawer, isLobby, invertLayout, onExpand
 
   return (
     <div className={`h-full flex flex-col overflow-hidden ${onClose ? '' : 'bg-white dark:bg-surface-800 rounded-card shadow-game'}`}>
-      <div className="px-3 py-2.5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
+      <div {...dragHandleProps} className={`px-3 py-2.5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between ${dragHandleProps ? 'touch-none cursor-grab active:cursor-grabbing' : ''}`}>
         <h3 className="font-bold text-base text-surface-900 dark:text-surface-100">{t('chat.title')}</h3>
         <div className="flex items-center gap-1">
           {onExpand && (

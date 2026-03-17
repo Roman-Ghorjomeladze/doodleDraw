@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useDragControls } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useGame } from '@/hooks/useGame';
@@ -17,6 +17,7 @@ export default function RoomLobby() {
   const { t } = useTranslation();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showExpandedChat, setShowExpandedChat] = useState(false);
+  const chatDragControls = useDragControls();
 
   const minPlayers = mode === 'team' ? MIN_PLAYERS_TEAM : MIN_PLAYERS_CLASSIC;
   const canStart = players.length >= minPlayers;
@@ -289,10 +290,12 @@ export default function RoomLobby() {
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 drag="y"
+                dragControls={chatDragControls}
+                dragListener={false}
                 dragConstraints={{ top: 0 }}
                 dragElastic={0.2}
                 onDragEnd={(_e, info) => {
-                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                  if (info.offset.y > 150 || info.velocity.y > 600) {
                     setShowExpandedChat(false);
                   }
                 }}
@@ -300,11 +303,21 @@ export default function RoomLobby() {
                 style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
                 onClick={e => e.stopPropagation()}
               >
-                {/* Drag handle indicator */}
-                <div className="sm:hidden flex justify-center pt-2 pb-1">
+                {/* Drag handle */}
+                <div
+                  className="sm:hidden flex justify-center pt-2 pb-1 touch-none cursor-grab active:cursor-grabbing"
+                  onPointerDown={(e) => chatDragControls.start(e)}
+                >
                   <div className="w-10 h-1 rounded-full bg-surface-300 dark:bg-surface-600" />
                 </div>
-                <GuessingChat isDrawer={false} isLobby bottomAligned showAvatars onClose={() => setShowExpandedChat(false)} />
+                <GuessingChat
+                  isDrawer={false}
+                  isLobby
+                  bottomAligned
+                  showAvatars
+                  onClose={() => setShowExpandedChat(false)}
+                  dragHandleProps={{ onPointerDown: (e) => chatDragControls.start(e) }}
+                />
               </motion.div>
             </motion.div>
           )}
