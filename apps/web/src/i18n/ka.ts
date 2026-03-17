@@ -200,6 +200,7 @@ export const ka: Translations = {
 
 	// Chat (spectator)
 	'chat.spectatorOnly': 'მაყურებლების ჩატი',
+	'chat.expand': 'ჩატის გაშლა',
 
 	// Theme
 	'theme.switchToLight': 'ღია რეჟიმზე გადართვა',

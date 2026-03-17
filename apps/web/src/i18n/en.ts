@@ -198,6 +198,7 @@ export const en = {
 
 	// Chat (spectator)
 	'chat.spectatorOnly': 'Spectator chat',
+	'chat.expand': 'Expand chat',
 
 	// Theme
 	'theme.switchToLight': 'Switch to light mode',

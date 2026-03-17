@@ -191,6 +191,7 @@ export const ru: Translations = {
 
   // Chat (spectator)
   'chat.spectatorOnly': 'Чат зрителей',
+  'chat.expand': 'Развернуть чат',
 
   // Theme
   'theme.switchToLight': 'Переключить на светлый режим',

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
 import { usePlayerStore } from '@/stores/playerStore';
@@ -15,6 +16,7 @@ export default function RoomLobby() {
   const { startGame, cancelStartGame, leaveRoom, updateSettings, switchTeam } = useGame();
   const { t } = useTranslation();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showExpandedChat, setShowExpandedChat] = useState(false);
 
   const minPlayers = mode === 'team' ? MIN_PLAYERS_TEAM : MIN_PLAYERS_CLASSIC;
   const canStart = players.length >= minPlayers;
@@ -22,6 +24,14 @@ export default function RoomLobby() {
   const currentSettings = settings || DEFAULT_ROOM_SETTINGS;
 
   const isCountingDown = countdownSeconds !== null && countdownSeconds > 0;
+
+  // Lock body scroll when expanded chat is open
+  useEffect(() => {
+    if (showExpandedChat) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [showExpandedChat]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -217,7 +227,7 @@ export default function RoomLobby() {
 
         {/* Lobby Chat */}
         <div className="mt-6 h-48">
-          <GuessingChat isDrawer={false} isLobby />
+          <GuessingChat isDrawer={false} isLobby onExpand={() => setShowExpandedChat(true)} />
         </div>
 
         {/* Actions */}
@@ -261,6 +271,46 @@ export default function RoomLobby() {
           />
         )}
       </AnimatePresence>
+
+      {/* Expanded Chat Modal — portalled to body so it renders above the sticky header */}
+      {createPortal(
+        <AnimatePresence>
+          {showExpandedChat && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
+              onClick={() => setShowExpandedChat(false)}
+            >
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_e, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                    setShowExpandedChat(false);
+                  }
+                }}
+                className="max-w-lg w-full h-[100dvh] sm:h-[85vh] rounded-t-2xl sm:rounded-card bg-white dark:bg-surface-800 relative overflow-hidden"
+                style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Drag handle indicator */}
+                <div className="sm:hidden flex justify-center pt-2 pb-1">
+                  <div className="w-10 h-1 rounded-full bg-surface-300 dark:bg-surface-600" />
+                </div>
+                <GuessingChat isDrawer={false} isLobby bottomAligned showAvatars onClose={() => setShowExpandedChat(false)} />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
 
     </div>
   );

@@ -191,6 +191,7 @@ export const tr: Translations = {
 
   // Chat (spectator)
   'chat.spectatorOnly': 'İzleyici sohbeti',
+  'chat.expand': 'Sohbeti genişlet',
 
   // Theme
   'theme.switchToLight': 'Açık moda geç',
