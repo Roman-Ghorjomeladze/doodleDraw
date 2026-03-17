@@ -143,7 +143,7 @@ export default function HomePage() {
 	};
 
 	return (
-		<div className={`mx-auto mt-2 sm:mt-8 ${isSidebar ? 'max-w-[44rem]' : 'max-w-[29.5rem]'}`}>
+		<div className={`mx-auto h-full flex flex-col justify-center sm:justify-start sm:h-auto sm:mt-8 ${isSidebar ? 'max-w-[44rem]' : 'max-w-[29.5rem]'}`}>
 			{/* Logo section - hidden on mobile to save space */}
 			<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className='text-center mb-4 sm:mb-8 hidden sm:block'>
 				<h2 className='mb-2'>
