@@ -118,7 +118,7 @@ export const ka: Translations = {
 	'settings.soundEffects': 'ხმოვანი ეფექტები',
 	'settings.soundOn': 'ხმა ჩართულია',
 	'settings.soundOff': 'ხმა გამორთულია',
-	'settings.theme': 'თემა',
+	'settings.theme': 'ფონი',
 	'settings.homeLayout': 'მთავარი განლაგება',
 	'settings.standard': 'სტანდარტული',
 	'settings.medium': 'საშუალო',
