@@ -96,7 +96,7 @@ export default function JoinRoom() {
         <label className="text-sm font-semibold text-surface-600 dark:text-surface-400 mb-2 block">
           {t('join.roomCode')}
         </label>
-        <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+        <div className="flex gap-1.5 min-[380px]:gap-2 justify-center" onPaste={handlePaste}>
           {code.map((char, i) => (
             <input
               key={i}
@@ -106,7 +106,7 @@ export default function JoinRoom() {
               value={char}
               onChange={e => handleCodeChange(i, e.target.value)}
               onKeyDown={e => handleKeyDown(i, e)}
-              className="w-11 h-13 text-center text-xl font-bold rounded-button bg-surface-50 dark:bg-surface-700 border-2 border-surface-200 dark:border-surface-600 focus:border-primary-500 focus:outline-none transition-all uppercase"
+              className="w-9 h-11 min-[380px]:w-11 min-[380px]:h-13 text-center text-lg min-[380px]:text-xl font-bold rounded-button bg-surface-50 dark:bg-surface-700 border-2 border-surface-200 dark:border-surface-600 focus:border-primary-500 focus:outline-none transition-all uppercase"
             />
           ))}
         </div>
@@ -132,7 +132,7 @@ export default function JoinRoom() {
         <label className="text-sm font-semibold text-surface-600 dark:text-surface-400 mb-2 block">
           {t('create.avatar')}
         </label>
-        <div className="grid grid-cols-4 sm:grid-cols-10 gap-2 justify-items-center">
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 justify-items-center">
           {AVATAR_SEEDS.map(seed => (
             <motion.button
               key={seed}
@@ -151,7 +151,7 @@ export default function JoinRoom() {
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="grid grid-cols-4 sm:grid-cols-10 gap-2 justify-items-center mt-2"
+            className="grid grid-cols-4 sm:grid-cols-8 gap-2 justify-items-center mt-2"
           >
             {EXTRA_AVATAR_SEEDS.map(seed => (
               <motion.button

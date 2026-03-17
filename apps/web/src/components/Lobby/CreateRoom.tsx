@@ -69,7 +69,7 @@ export default function CreateRoom() {
 				<label className='text-sm font-semibold text-surface-600 dark:text-surface-400 mb-1.5 sm:mb-2 block'>
 					{t('create.avatar')}
 				</label>
-				<div className='grid grid-cols-4 sm:grid-cols-10 gap-1.5 sm:gap-2 justify-items-center'>
+				<div className='grid grid-cols-4 sm:grid-cols-8 gap-1.5 sm:gap-2 justify-items-center'>
 					{AVATAR_SEEDS.map((seed) => (
 						<motion.button
 							key={seed}
@@ -90,7 +90,7 @@ export default function CreateRoom() {
 					<motion.div
 						initial={{ opacity: 0, height: 0 }}
 						animate={{ opacity: 1, height: 'auto' }}
-						className='grid grid-cols-4 sm:grid-cols-10 gap-2 justify-items-center mt-2'
+						className='grid grid-cols-4 sm:grid-cols-8 gap-2 justify-items-center mt-2'
 					>
 						{EXTRA_AVATAR_SEEDS.map((seed) => (
 							<motion.button

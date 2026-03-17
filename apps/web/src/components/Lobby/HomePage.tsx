@@ -128,7 +128,7 @@ export default function HomePage() {
 		};
 
 		return (
-			<AnimatePresence mode='wait'>
+			<AnimatePresence mode='wait' initial={false}>
 				<motion.div
 					key={tab}
 					initial={{ opacity: 0, x: 20 }}
@@ -143,7 +143,7 @@ export default function HomePage() {
 	};
 
 	return (
-		<div className={`mx-auto h-full flex flex-col justify-center sm:justify-start sm:h-auto sm:mt-8 ${isSidebar ? 'max-w-[44rem]' : 'max-w-[29.5rem]'}`}>
+		<div className={`mx-auto my-auto sm:my-0 sm:mt-8 w-full ${isSidebar ? 'max-w-[44rem]' : 'max-w-[29.5rem]'}`}>
 			{/* Logo section - hidden on mobile to save space */}
 			<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className='text-center mb-4 sm:mb-8 hidden sm:block'>
 				<h2 className='mb-2'>
@@ -152,7 +152,7 @@ export default function HomePage() {
 				<p className='text-surface-500 dark:text-surface-400'>{t('app.subtitle')}</p>
 			</motion.div>
 
-			<div className='bg-white dark:bg-surface-800 rounded-card shadow-game-lg overflow-hidden'>
+			<motion.div layout transition={{ layout: { type: 'spring', stiffness: 120, damping: 24, mass: 0.8 } }} className='bg-white dark:bg-surface-800 rounded-card shadow-game-lg overflow-hidden'>
 				{isSidebar ? (
 					/* ── Sidebar layout ── */
 					<div className='flex min-h-[400px]'>
@@ -174,7 +174,7 @@ export default function HomePage() {
 							))}
 						</div>
 
-						<div className='flex-1 p-4 sm:p-6 overflow-y-auto'>{renderTabContent()}</div>
+						<div className='flex-1 p-4 sm:p-6 overflow-y-auto min-h-[565px]'>{renderTabContent()}</div>
 					</div>
 				) : (
 					/* ── Tabs layout ── */
@@ -202,10 +202,10 @@ export default function HomePage() {
 							))}
 						</div>
 
-						<div className='p-6'>{renderTabContent()}</div>
+						<div className='p-6 min-h-[565px]'>{renderTabContent()}</div>
 					</>
 				)}
-			</div>
+			</motion.div>
 		</div>
 	);
 }

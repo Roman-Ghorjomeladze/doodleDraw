@@ -42,7 +42,7 @@ export default function App() {
     <div className="h-dvh flex flex-col bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-50 transition-colors duration-300 overflow-hidden">
       <Header />
       <ConnectionStatus />
-      <main className="flex-1 overflow-y-auto container mx-auto px-2 sm:px-4 py-2 sm:py-6 w-full">
+      <main className="flex-1 flex flex-col overflow-y-auto container mx-auto px-2 sm:px-4 py-2 sm:py-6 w-full">
         {!roomId && <HomePage />}
         {roomId && phase === 'lobby' && <RoomLobby />}
         {roomId && phase !== 'lobby' && <GameRoom />}
