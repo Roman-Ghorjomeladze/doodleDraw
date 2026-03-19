@@ -55,15 +55,16 @@ function attachConnectionEvents(s: TypedSocket) {
       reconnectFailed: false,
     });
 
-    // Attempt to reconnect to an existing game session.
-    const roomId = sessionStorage.getItem('doodledraw_roomId');
+    // Attempt to reconnect to an existing game session using persistentId.
     const stored = localStorage.getItem('doodledraw-player');
-    if (roomId && stored) {
+    if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        const playerId = parsed?.state?.playerId;
-        if (playerId && playerId !== s.id) {
-          s.emit('game:reconnect', { roomId, playerId });
+        const persistentId = parsed?.state?.persistentId;
+        if (persistentId) {
+          const roomId = sessionStorage.getItem('doodledraw_roomId');
+          // Send reconnect even without roomId — server can look up by persistentId
+          s.emit('game:reconnect', { roomId: roomId || undefined, persistentId });
         }
       } catch {
         // Ignore parse errors.

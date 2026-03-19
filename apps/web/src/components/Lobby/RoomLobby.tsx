@@ -13,7 +13,7 @@ import { DEFAULT_ROOM_SETTINGS, MIN_PLAYERS_CLASSIC, MIN_PLAYERS_TEAM } from '@d
 export default function RoomLobby() {
   const { roomId, mode, players, isHost, settings, countdownSeconds } = useGameStore();
   const { playerId } = usePlayerStore();
-  const { startGame, cancelStartGame, leaveRoom, updateSettings, switchTeam } = useGame();
+  const { startGame, cancelStartGame, leaveRoom, updateSettings, switchTeam, kickPlayer } = useGame();
   const { t } = useTranslation();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showExpandedChat, setShowExpandedChat] = useState(false);
@@ -41,43 +41,46 @@ export default function RoomLobby() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white dark:bg-surface-800 rounded-card shadow-game-lg p-6 relative overflow-hidden"
       >
-        {/* Countdown Overlay */}
-        <AnimatePresence>
-          {isCountingDown && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center"
-            >
-              <p className="text-white/70 text-lg font-medium mb-2">
-                {t('lobby.starting')}
-              </p>
+        {/* Countdown Overlay — portalled to body so it's always visible */}
+        {createPortal(
+          <AnimatePresence>
+            {isCountingDown && (
               <motion.div
-                key={countdownSeconds}
-                initial={{ scale: 2, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-                transition={{ type: 'spring', duration: 0.4 }}
-                className="text-8xl font-black text-white drop-shadow-lg"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center"
               >
-                {countdownSeconds}
-              </motion.div>
-              {isHost && (
-                <motion.button
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={cancelStartGame}
-                  className="mt-6 px-6 py-2 rounded-button bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors"
+                <p className="text-white/70 text-lg font-medium mb-2">
+                  {t('lobby.starting')}
+                </p>
+                <motion.div
+                  key={countdownSeconds}
+                  initial={{ scale: 2, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  transition={{ type: 'spring', duration: 0.4 }}
+                  className="text-8xl font-black text-white drop-shadow-lg"
                 >
-                  {t('lobby.cancelStart')}
-                </motion.button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  {countdownSeconds}
+                </motion.div>
+                {isHost && (
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={cancelStartGame}
+                    className="mt-6 px-6 py-2 rounded-button bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors"
+                  >
+                    {t('lobby.cancelStart')}
+                  </motion.button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
 
         {/* Mode Badge */}
         <div className="text-center mb-6">
@@ -92,7 +95,7 @@ export default function RoomLobby() {
             <h3 className="font-semibold mb-3">
               {t('lobby.players')} ({players.length}/{currentSettings.maxPlayers})
             </h3>
-            <PlayerList players={players} mode={mode || 'classic'} teamAName={currentSettings.teamAName} teamBName={currentSettings.teamBName} onSwitchTeam={mode === 'team' ? switchTeam : undefined} currentPlayerId={playerId || undefined} />
+            <PlayerList players={players} mode={mode || 'classic'} teamAName={currentSettings.teamAName} teamBName={currentSettings.teamBName} onSwitchTeam={mode === 'team' ? switchTeam : undefined} currentPlayerId={playerId || undefined} onKickPlayer={isHost ? kickPlayer : undefined} />
           </div>
 
           {/* Settings (host only) */}

@@ -21,13 +21,14 @@ export const EVENT_RATE_LIMITS: Record<string, RateLimitRule> = {
   'draw:undo': { max: 5, windowMs: 5_000 },
 
   // Chat
-  'chat:message': { max: 4, windowMs: 3_000 },
+  'chat:message': { max: 6, windowMs: 5_000 },
 
   // Room lifecycle – low frequency
   'room:create': { max: 2, windowMs: 10_000 },
   'room:join': { max: 3, windowMs: 10_000 },
   'room:spectate': { max: 3, windowMs: 10_000 },
   'room:leave': { max: 3, windowMs: 5_000 },
+  'room:kick': { max: 3, windowMs: 10_000 },
   'room:settings': { max: 8, windowMs: 5_000 },
 
   // Game actions
@@ -46,7 +47,7 @@ export const GLOBAL_RATE_LIMIT: RateLimitRule = {
 };
 
 /** Number of rate-limit violations before auto-disconnect. */
-export const MAX_VIOLATIONS = 15;
+export const MAX_VIOLATIONS = 25;
 
 /** Window for counting violations (ms). */
 export const VIOLATION_WINDOW_MS = 60_000;

@@ -14,9 +14,9 @@ export function useGame() {
 
   const createRoom = useCallback(
     (mode: GameMode, options?: { isPublic?: boolean }) => {
-      const { nickname, avatar } = usePlayerStore.getState();
+      const { nickname, avatar, persistentId } = usePlayerStore.getState();
       const { language } = useSettingsStore.getState();
-      emit('room:create', { mode, nickname, avatar });
+      emit('room:create', { mode, nickname, avatar, persistentId });
       // Apply the user's preferred language and public setting
       emit('room:settings', { language, ...(options?.isPublic != null ? { isPublic: options.isPublic } : {}) });
     },
@@ -25,8 +25,8 @@ export function useGame() {
 
   const joinRoom = useCallback(
     (roomId: string) => {
-      const { nickname, avatar } = usePlayerStore.getState();
-      emit('room:join', { roomId, nickname, avatar });
+      const { nickname, avatar, persistentId } = usePlayerStore.getState();
+      emit('room:join', { roomId, nickname, avatar, persistentId });
     },
     [emit],
   );
@@ -69,9 +69,9 @@ export function useGame() {
 
   const spectateRoom = useCallback(
     (roomId: string) => {
-      const { nickname, avatar } = usePlayerStore.getState();
+      const { nickname, avatar, persistentId } = usePlayerStore.getState();
       usePlayerStore.getState().setIsSpectator(true);
-      emit('room:spectate', { roomId, nickname, avatar });
+      emit('room:spectate', { roomId, nickname, avatar, persistentId });
     },
     [emit],
   );
@@ -86,6 +86,13 @@ export function useGame() {
   const switchTeam = useCallback(
     (team: Team) => {
       emit('team:switch', { team });
+    },
+    [emit],
+  );
+
+  const kickPlayer = useCallback(
+    (playerId: string) => {
+      emit('room:kick', { playerId });
     },
     [emit],
   );
@@ -107,5 +114,6 @@ export function useGame() {
     switchTeam,
     spectateRoom,
     rematchVote,
+    kickPlayer,
   };
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import {
   Room,
   Player,
@@ -16,6 +16,7 @@ import {
   DEFAULT_ROOM_SETTINGS,
   TEAM_NAME_PAIRS,
 } from '@doodledraw/shared';
+import { RoomPersistenceService } from './room-persistence.service';
 
 const ROOM_CLEANUP_DELAY_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -23,7 +24,7 @@ const ROOM_CLEANUP_DELAY_MS = 5 * 60 * 1000; // 5 minutes
 const ROOM_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 @Injectable()
-export class RoomService {
+export class RoomService implements OnModuleInit {
   private readonly logger = new Logger(RoomService.name);
 
   /** All active rooms keyed by room id (the 6-char code). */
@@ -32,8 +33,33 @@ export class RoomService {
   /** Maps a socket id to the room id the player is in. */
   readonly playerRoomMap: Map<string, string> = new Map();
 
+  /** Maps a persistent UUID to the room id the player is in. */
+  readonly persistentPlayerRoomMap: Map<string, string> = new Map();
+
   /** Pending cleanup timeouts per room id. */
   private readonly cleanupTimers: Map<string, NodeJS.Timeout> = new Map();
+
+  constructor(private readonly persistence: RoomPersistenceService) {}
+
+  async onModuleInit(): Promise<void> {
+    try {
+      const restored = await this.persistence.loadActiveRooms();
+      for (const room of restored) {
+        this.rooms.set(room.id, room);
+
+        // Register persistent IDs so players can reconnect.
+        for (const [, player] of room.players) {
+          this.persistentPlayerRoomMap.set(player.persistentId, room.id);
+        }
+
+        // All players are disconnected on startup — schedule cleanup.
+        this.scheduleCleanup(room.id);
+      }
+      this.logger.log(`Restored ${restored.length} room(s) from MongoDB`);
+    } catch (err: any) {
+      this.logger.error(`Failed to restore rooms from MongoDB: ${err.message}`);
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Room lifecycle
@@ -44,11 +70,13 @@ export class RoomService {
     hostId: string,
     nickname: string,
     avatar: string,
+    persistentId: string,
   ): Room {
     const roomId = this.generateRoomCode();
 
     const host: Player = {
       id: hostId,
+      persistentId,
       nickname,
       avatar,
       score: 0,
@@ -97,8 +125,10 @@ export class RoomService {
 
     this.rooms.set(roomId, room);
     this.playerRoomMap.set(hostId, roomId);
+    this.persistentPlayerRoomMap.set(persistentId, roomId);
 
     this.logger.log(`Room ${roomId} created by ${nickname} (${hostId}) [${mode}]`);
+    this.persistence.persistRoom(room);
     return room;
   }
 
@@ -107,6 +137,7 @@ export class RoomService {
     playerId: string,
     nickname: string,
     avatar: string,
+    persistentId: string,
   ): Room {
     const room = this.rooms.get(roomId);
     if (!room) {
@@ -130,6 +161,7 @@ export class RoomService {
 
     const player: Player = {
       id: playerId,
+      persistentId,
       nickname,
       avatar,
       score: 0,
@@ -146,10 +178,12 @@ export class RoomService {
 
     room.players.set(playerId, player);
     this.playerRoomMap.set(playerId, roomId);
+    this.persistentPlayerRoomMap.set(persistentId, roomId);
 
     this.cancelCleanup(roomId);
 
     this.logger.log(`Player ${nickname} (${playerId}) joined room ${roomId}`);
+    this.persistence.persistRoom(room);
     return room;
   }
 
@@ -158,6 +192,7 @@ export class RoomService {
     playerId: string,
     nickname: string,
     avatar: string,
+    persistentId: string,
   ): Room {
     const room = this.rooms.get(roomId);
     if (!room) {
@@ -173,6 +208,7 @@ export class RoomService {
 
     const player: Player = {
       id: playerId,
+      persistentId,
       nickname,
       avatar,
       score: 0,
@@ -185,10 +221,12 @@ export class RoomService {
 
     room.players.set(playerId, player);
     this.playerRoomMap.set(playerId, roomId);
+    this.persistentPlayerRoomMap.set(persistentId, roomId);
 
     this.cancelCleanup(roomId);
 
     this.logger.log(`Spectator ${nickname} (${playerId}) joined room ${roomId}`);
+    this.persistence.persistRoom(room);
     return room;
   }
 
@@ -207,11 +245,15 @@ export class RoomService {
 
     room.players.delete(playerId);
     this.playerRoomMap.delete(playerId);
+    if (player?.persistentId) {
+      this.persistentPlayerRoomMap.delete(player.persistentId);
+    }
 
     // If room is now empty, delete it immediately.
     if (room.players.size === 0) {
       this.cancelCleanup(roomId);
       this.rooms.delete(roomId);
+      this.persistence.deleteRoom(roomId);
       this.logger.log(`Room ${roomId} deleted (all players left)`);
       return { room, wasHost };
     }
@@ -225,6 +267,7 @@ export class RoomService {
       }
     }
 
+    this.persistence.persistRoom(room);
     return { room, wasHost };
   }
 
@@ -262,6 +305,7 @@ export class RoomService {
       this.scheduleCleanup(roomId);
     }
 
+    this.persistence.persistRoom(room);
     return room;
   }
 
@@ -319,6 +363,7 @@ export class RoomService {
     this.cancelCleanup(roomId);
 
     this.logger.log(`Player ${player.nickname} reconnected: ${oldPlayerId} → ${newPlayerId} in room ${roomId}`);
+    this.persistence.persistRoom(room);
     return room;
   }
 
@@ -334,6 +379,47 @@ export class RoomService {
     const roomId = this.playerRoomMap.get(playerId);
     if (!roomId) return undefined;
     return this.rooms.get(roomId);
+  }
+
+  /**
+   * Find a room and player by persistent UUID.
+   */
+  findByPersistentId(persistentId: string): { room: Room; player: Player; roomId: string } | null {
+    const roomId = this.persistentPlayerRoomMap.get(persistentId);
+    if (!roomId) return null;
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      this.persistentPlayerRoomMap.delete(persistentId);
+      return null;
+    }
+    for (const [, player] of room.players) {
+      if (player.persistentId === persistentId) {
+        return { room, player, roomId };
+      }
+    }
+    this.persistentPlayerRoomMap.delete(persistentId);
+    return null;
+  }
+
+  /**
+   * Kick a player from a room (lobby only). Returns the removed player.
+   */
+  kickPlayer(roomId: string, targetPlayerId: string): Player {
+    const room = this.rooms.get(roomId);
+    if (!room) throw new Error('Room not found');
+
+    const player = room.players.get(targetPlayerId);
+    if (!player) throw new Error('Player not found');
+
+    room.players.delete(targetPlayerId);
+    this.playerRoomMap.delete(targetPlayerId);
+    if (player.persistentId) {
+      this.persistentPlayerRoomMap.delete(player.persistentId);
+    }
+
+    this.logger.log(`Player ${player.nickname} (${targetPlayerId}) kicked from room ${roomId}`);
+    this.persistence.persistRoom(room);
+    return player;
   }
 
   // ---------------------------------------------------------------------------
@@ -418,6 +504,7 @@ export class RoomService {
     };
 
     this.logger.log(`Room ${roomId} settings updated`);
+    this.persistence.persistRoom(room);
     return room;
   }
 
@@ -515,9 +602,13 @@ export class RoomService {
       const anyConnected = Array.from(room.players.values()).some((p) => p.isConnected);
       if (!anyConnected) {
         this.rooms.delete(roomId);
+        this.persistence.deleteRoom(roomId);
         // Clean up player-room mappings for remaining entries.
         for (const [, player] of room.players) {
           this.playerRoomMap.delete(player.id);
+          if (player.persistentId) {
+            this.persistentPlayerRoomMap.delete(player.persistentId);
+          }
         }
         this.logger.log(`Room ${roomId} cleaned up (no connected players)`);
       }

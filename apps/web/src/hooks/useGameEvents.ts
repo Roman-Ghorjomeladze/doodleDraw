@@ -141,6 +141,17 @@ export function useGameEvents() {
     );
 
     unsubscribers.push(
+      on('room:kicked', () => {
+        useGameStore.getState().reset();
+        useDrawingStore.getState().reset();
+        usePlayerStore.getState().setIsSpectator(false);
+        sessionStorage.removeItem('doodledraw_roomId');
+        // Show a system message on next render
+        console.log('[DoodleDraw] Kicked from room by host');
+      }),
+    );
+
+    unsubscribers.push(
       on('room:error', ({ message }) => {
         console.error('[DoodleDraw] Room error:', message);
       }),

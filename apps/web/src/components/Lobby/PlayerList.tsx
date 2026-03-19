@@ -11,9 +11,10 @@ interface PlayerListProps {
   teamBName?: string;
   onSwitchTeam?: (team: Team) => void;
   currentPlayerId?: string;
+  onKickPlayer?: (playerId: string) => void;
 }
 
-export default function PlayerList({ players, mode, showScores = false, teamAName, teamBName, onSwitchTeam, currentPlayerId }: PlayerListProps) {
+export default function PlayerList({ players, mode, showScores = false, teamAName, teamBName, onSwitchTeam, currentPlayerId, onKickPlayer }: PlayerListProps) {
   const { t } = useTranslation();
   const teamA = mode === 'team' ? players.filter(p => p.team === 'A') : [];
   const teamB = mode === 'team' ? players.filter(p => p.team === 'B') : [];
@@ -34,6 +35,8 @@ export default function PlayerList({ players, mode, showScores = false, teamANam
           btnClass="bg-team-a/20 hover:bg-team-a/30 text-team-a"
           isMyTeam={myTeam === 'A'}
           onSwitchTeam={onSwitchTeam}
+          currentPlayerId={currentPlayerId}
+          onKickPlayer={onKickPlayer}
         />
         <TeamSection
           team="B"
@@ -46,12 +49,14 @@ export default function PlayerList({ players, mode, showScores = false, teamANam
           btnClass="bg-team-b/20 hover:bg-team-b/30 text-team-b"
           isMyTeam={myTeam === 'B'}
           onSwitchTeam={onSwitchTeam}
+          currentPlayerId={currentPlayerId}
+          onKickPlayer={onKickPlayer}
         />
       </div>
     );
   }
 
-  return <PlayerGroup players={players} showScores={showScores} />;
+  return <PlayerGroup players={players} showScores={showScores} currentPlayerId={currentPlayerId} onKickPlayer={onKickPlayer} />;
 }
 
 function TeamSection({
@@ -65,6 +70,8 @@ function TeamSection({
   btnClass,
   isMyTeam,
   onSwitchTeam,
+  currentPlayerId,
+  onKickPlayer,
 }: {
   team: Team;
   teamName: string;
@@ -76,6 +83,8 @@ function TeamSection({
   btnClass: string;
   isMyTeam: boolean;
   onSwitchTeam?: (team: Team) => void;
+  currentPlayerId?: string;
+  onKickPlayer?: (playerId: string) => void;
 }) {
   const { t } = useTranslation();
 
@@ -96,12 +105,12 @@ function TeamSection({
           </motion.button>
         )}
       </div>
-      <PlayerGroup players={players} showScores={showScores} />
+      <PlayerGroup players={players} showScores={showScores} currentPlayerId={currentPlayerId} onKickPlayer={onKickPlayer} />
     </div>
   );
 }
 
-function PlayerGroup({ players, showScores }: { players: Player[]; showScores: boolean }) {
+function PlayerGroup({ players, showScores, currentPlayerId, onKickPlayer }: { players: Player[]; showScores: boolean; currentPlayerId?: string; onKickPlayer?: (playerId: string) => void }) {
   const { t } = useTranslation();
   return (
     <div className="space-y-1.5">
@@ -139,6 +148,19 @@ function PlayerGroup({ players, showScores }: { players: Player[]; showScores: b
               <div className="font-bold text-primary-600 dark:text-primary-400">
                 {player.score}
               </div>
+            )}
+            {onKickPlayer && !player.isHost && player.id !== currentPlayerId && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => onKickPlayer(player.id)}
+                className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                title="Kick player"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </motion.button>
             )}
           </motion.div>
         ))}

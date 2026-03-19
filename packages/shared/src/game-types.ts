@@ -11,6 +11,7 @@ export type Team = 'A' | 'B';
 
 export interface Player {
   id: string;
+  persistentId: string;
   nickname: string;
   avatar: string;
   score: number;
@@ -95,6 +96,7 @@ export interface DrawAction {
   color?: string;
   brushSize?: number;
   tool?: 'pen' | 'eraser' | 'fill';
+  strokeId?: string;
   timestamp: number;
   playerId: string;
 }

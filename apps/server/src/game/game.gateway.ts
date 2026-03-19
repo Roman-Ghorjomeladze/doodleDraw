@@ -30,6 +30,7 @@ import {
   validateWordIndex,
   validateDrawAction,
   validateSettings,
+  validatePersistentId,
 } from './utils/validation';
 
 const DRAWER_DISCONNECT_GRACE_MS = 10_000; // 10 seconds
@@ -159,7 +160,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   @SubscribeMessage('room:create')
   async handleRoomCreate(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { mode: GameMode; nickname: string; avatar: string },
+    @MessageBody() data: { mode: GameMode; nickname: string; avatar: string; persistentId: string },
   ): Promise<void> {
     if (this.throttle(client, 'room:create')) return;
 
@@ -168,8 +169,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       const mode = validateGameMode(data?.mode);
       const nickname = validateNickname(data?.nickname);
       const avatar = validateAvatar(data?.avatar);
+      const persistentId = validatePersistentId(data?.persistentId);
 
-      if (!mode || !nickname || !avatar) {
+      if (!mode || !nickname || !avatar || !persistentId) {
         client.emit('room:error', { message: 'Invalid input' });
         return;
       }
@@ -180,7 +182,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         return;
       }
 
-      const room = this.roomService.createRoom(mode, client.id, nickname, avatar);
+      const room = this.roomService.createRoom(mode, client.id, nickname, avatar, persistentId);
 
       // Join the Socket.IO room.
       await client.join(room.id);
@@ -200,7 +202,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   @SubscribeMessage('room:join')
   async handleRoomJoin(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; nickname: string; avatar: string },
+    @MessageBody() data: { roomId: string; nickname: string; avatar: string; persistentId: string },
   ): Promise<void> {
     if (this.throttle(client, 'room:join')) return;
 
@@ -209,8 +211,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       const roomId = validateRoomCode(data?.roomId);
       const nickname = validateNickname(data?.nickname);
       const avatar = validateAvatar(data?.avatar);
+      const persistentId = validatePersistentId(data?.persistentId);
 
-      if (!roomId || !nickname || !avatar) {
+      if (!roomId || !nickname || !avatar || !persistentId) {
         client.emit('room:error', { message: 'Invalid input' });
         return;
       }
@@ -221,7 +224,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         return;
       }
 
-      const room = this.roomService.joinRoom(roomId, client.id, nickname, avatar);
+      const room = this.roomService.joinRoom(roomId, client.id, nickname, avatar, persistentId);
 
       await client.join(room.id);
 
@@ -599,34 +602,37 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   @SubscribeMessage('game:reconnect')
   async handleReconnect(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; playerId: string },
+    @MessageBody() data: { roomId?: string; persistentId: string },
   ): Promise<void> {
     if (this.throttle(client, 'game:reconnect')) return;
 
     try {
-      const roomId = validateRoomCode(data?.roomId);
-      if (!roomId || !data?.playerId) {
+      const persistentId = validatePersistentId(data?.persistentId);
+      if (!persistentId) {
         client.emit('room:error', { message: 'Invalid reconnect data' });
         return;
       }
 
-      const room = this.roomService.getRoom(roomId);
-      if (!room) {
-        client.emit('room:error', { message: 'Room no longer exists' });
+      // Look up room by persistentId.
+      const found = this.roomService.findByPersistentId(persistentId);
+      if (!found) {
+        // No active room for this player — silently ignore.
         return;
       }
 
-      const player = room.players.get(data.playerId);
-      if (!player) {
-        client.emit('room:error', { message: 'Cannot reconnect' });
-        return;
-      }
+      const { room, player: existingPlayer, roomId } = found;
+      const oldPlayerId = existingPlayer.id;
 
       // If the old socket is still marked as connected (race condition during
       // transport upgrade), force-mark as disconnected so reconnection can proceed.
-      if (player.isConnected) {
-        player.isConnected = false;
-        this.logger.warn(`Force-disconnecting stale socket ${data.playerId} for reconnection`);
+      if (existingPlayer.isConnected && oldPlayerId !== client.id) {
+        existingPlayer.isConnected = false;
+        this.logger.warn(`Force-disconnecting stale socket ${oldPlayerId} for reconnection`);
+      }
+
+      // If we're already in this room with the same socket, skip.
+      if (oldPlayerId === client.id && existingPlayer.isConnected) {
+        return;
       }
 
       // Prevent socket from being in multiple rooms.
@@ -636,10 +642,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       }
 
       // Transfer player from old socket ID to new socket ID.
-      this.roomService.reconnectPlayer(roomId, data.playerId, client.id);
+      this.roomService.reconnectPlayer(roomId, oldPlayerId, client.id);
 
       // Cancel any drawer disconnect grace timer.
-      const timerKey = `${roomId}:${data.playerId}`;
+      const timerKey = `${roomId}:${oldPlayerId}`;
       const timer = this.drawerDisconnectTimers.get(timerKey);
       if (timer) {
         clearTimeout(timer);
@@ -662,19 +668,26 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         room.teamADrawerId === client.id ||
         room.teamBDrawerId === client.id;
 
-
-
       // Determine word options to restore for the drawer during word selection.
       const wordOptions =
         isDrawer && room.phase === 'selecting_word' && room.pendingWords?.length
           ? room.pendingWords
           : undefined;
 
+      // Filter chat history: spectators only see spectator + system messages.
+      const isSpectator = existingPlayer.isSpectator;
+      const filteredMessages = room.chatHistory
+        .filter((msg) => {
+          if (isSpectator) return msg.isSpectatorMessage || msg.isSystemMessage;
+          return !msg.isSpectatorMessage;
+        })
+        .slice(-MAX_CHAT_HISTORY);
+
       // Send full state to the reconnecting client.
       client.emit('game:reconnected', {
         room: this.roomService.serializeRoom(room),
         drawingHistory: room.drawingHistory,
-        messages: room.chatHistory.slice(-MAX_CHAT_HISTORY),
+        messages: filteredMessages,
         timeLeft,
         currentWord: isDrawer ? (room.currentWord ?? undefined) : undefined,
         wordOptions,
@@ -690,7 +703,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         room: this.roomService.serializeRoom(room),
       });
 
-      this.logger.log(`Player reconnected to room ${roomId}: ${data.playerId} → ${client.id}`);
+      this.logger.log(`Player reconnected to room ${roomId}: ${oldPlayerId} → ${client.id}`);
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
@@ -703,7 +716,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   @SubscribeMessage('room:spectate')
   async handleSpectate(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; nickname: string; avatar: string },
+    @MessageBody() data: { roomId: string; nickname: string; avatar: string; persistentId: string },
   ): Promise<void> {
     if (this.throttle(client, 'room:spectate')) return;
 
@@ -711,8 +724,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       const roomId = validateRoomCode(data?.roomId);
       const nickname = validateNickname(data?.nickname);
       const avatar = validateAvatar(data?.avatar);
+      const persistentId = validatePersistentId(data?.persistentId);
 
-      if (!roomId || !nickname || !avatar) {
+      if (!roomId || !nickname || !avatar || !persistentId) {
         client.emit('room:error', { message: 'Invalid input' });
         return;
       }
@@ -722,7 +736,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         return;
       }
 
-      const room = this.roomService.spectateRoom(roomId, client.id, nickname, avatar);
+      const room = this.roomService.spectateRoom(roomId, client.id, nickname, avatar, persistentId);
 
       await client.join(room.id);
 
@@ -733,11 +747,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         timeLeft = Math.max(0, room.settings.roundTime - elapsed);
       }
 
+      // Spectators only see spectator + system messages in chat history.
+      const filteredMessages = room.chatHistory
+        .filter((msg) => msg.isSpectatorMessage || msg.isSystemMessage)
+        .slice(-MAX_CHAT_HISTORY);
+
       client.emit('room:spectateJoined', {
         room: this.roomService.serializeRoom(room),
         playerId: client.id,
         drawingHistory: room.drawingHistory,
-        messages: room.chatHistory.slice(-MAX_CHAT_HISTORY),
+        messages: filteredMessages,
         timeLeft,
       });
 
@@ -811,6 +830,72 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   }
 
   // ---------------------------------------------------------------------------
+  // Kick
+  // ---------------------------------------------------------------------------
+
+  @SubscribeMessage('room:kick')
+  async handleKick(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { playerId: string },
+  ): Promise<void> {
+    if (this.throttle(client, 'room:kick')) return;
+
+    try {
+      const room = this.roomService.getRoomForPlayer(client.id);
+      if (!room) {
+        client.emit('room:error', { message: 'Not in a room' });
+        return;
+      }
+
+      const player = room.players.get(client.id);
+      if (!player?.isHost) {
+        client.emit('room:error', { message: 'Only the host can kick players' });
+        return;
+      }
+
+      if (room.phase !== 'lobby') {
+        client.emit('room:error', { message: 'Can only kick players in lobby' });
+        return;
+      }
+
+      const targetId = data?.playerId;
+      if (!targetId || targetId === client.id) {
+        client.emit('room:error', { message: 'Invalid target' });
+        return;
+      }
+
+      const target = room.players.get(targetId);
+      if (!target) {
+        client.emit('room:error', { message: 'Player not found' });
+        return;
+      }
+
+      // Remove the player.
+      this.roomService.kickPlayer(room.id, targetId);
+
+      // Notify the kicked player.
+      this.server.to(targetId).emit('room:kicked', { reason: 'Kicked by host' });
+
+      // Make the target leave the Socket.IO room.
+      this.server.in(targetId).socketsLeave(room.id);
+
+      // Notify remaining players.
+      this.server.to(room.id).emit('room:playerLeft', {
+        playerId: targetId,
+        nickname: target.nickname,
+        wasInGame: false,
+      });
+      this.server.to(room.id).emit('room:updated', {
+        room: this.roomService.serializeRoom(room),
+      });
+
+      this.broadcastPublicRooms();
+    } catch (err: any) {
+      client.emit('room:error', { message: err.message });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
 
@@ -837,7 +922,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
   /**
    * Emit a chat message scoped to the sender's team in team mode,
-   * or to the entire room in classic mode / lobby.
+   * or to all players in classic mode / lobby.
+   * Player messages are also forwarded to spectators so they can
+   * follow the guesses, but spectator messages stay spectator-only.
    */
   private emitChatToTeam(
     room: import('@doodledraw/shared').Room,
@@ -845,11 +932,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     message: ChatMessage,
   ): void {
     if (room.mode !== 'team' || !senderTeam) {
-      this.server.to(room.id).emit('chat:message', message);
+      // Classic mode / lobby: send to all players + spectators.
+      for (const [id] of room.players) {
+        this.server.to(id).emit('chat:message', message);
+      }
       return;
     }
+    // Team mode: send to sender's team members + spectators.
     for (const [id, p] of room.players) {
-      if (p.team === senderTeam || p.isSpectator) {
+      if ((p.team === senderTeam && !p.isSpectator) || p.isSpectator) {
         this.server.to(id).emit('chat:message', message);
       }
     }

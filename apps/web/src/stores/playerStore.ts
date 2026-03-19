@@ -6,6 +6,7 @@ interface PlayerState {
   nickname: string;
   avatar: string;
   playerId: string | null;
+  persistentId: string;
   isSpectator: boolean;
 }
 
@@ -24,6 +25,7 @@ export const usePlayerStore = create<PlayerStore>()(
       nickname: '',
       avatar: AVATAR_SEEDS[Math.floor(Math.random() * AVATAR_SEEDS.length)],
       playerId: null,
+      persistentId: crypto.randomUUID(),
       isSpectator: false,
 
       setNickname: (nickname) => set({ nickname }),
@@ -36,7 +38,7 @@ export const usePlayerStore = create<PlayerStore>()(
     }),
     {
       name: 'doodledraw-player',
-      version: 2,
+      version: 3,
       migrate: (persisted: any, version: number) => {
         const state = persisted as any;
         if (version === 0) {
@@ -50,6 +52,12 @@ export const usePlayerStore = create<PlayerStore>()(
           // Migrate from funEmoji avatars to adventurer avatars
           if (state.avatar && !state.avatar.startsWith('adventurer:')) {
             state.avatar = AVATAR_SEEDS[Math.floor(Math.random() * AVATAR_SEEDS.length)];
+          }
+        }
+        if (version < 3) {
+          // Generate persistentId if missing
+          if (!state.persistentId) {
+            state.persistentId = crypto.randomUUID();
           }
         }
         return persisted;

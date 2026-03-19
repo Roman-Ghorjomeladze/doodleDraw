@@ -13,6 +13,11 @@ interface DrawingCanvasProps {
   replayEventName?: string;
 }
 
+/** How often (ms) to emit partial stroke updates while drawing. */
+const EMIT_INTERVAL_MS = 50;
+/** Minimum new points before emitting a partial stroke. */
+const MIN_POINTS_TO_EMIT = 3;
+
 export default function DrawingCanvas({
   isDrawer,
   isBlurred,
@@ -25,6 +30,11 @@ export default function DrawingCanvas({
   const historyRef = useRef<ImageData[]>([]);
   const { tool, color, brushSize } = useDrawingStore();
   const { socket, on } = useSocket();
+
+  // Streaming stroke refs
+  const strokeIdRef = useRef<string | null>(null);
+  const lastEmitIndexRef = useRef(0);
+  const lastEmitTimeRef = useRef(0);
 
   const getCtx = useCallback(() => {
     return canvasRef.current?.getContext('2d') ?? null;
@@ -132,6 +142,30 @@ export default function DrawingCanvas({
     ctx.putImageData(imageData, 0, 0);
   }, [getCtx]);
 
+  /** Emit a partial stroke with the points accumulated since lastEmitIndex. */
+  const emitPartialStroke = useCallback(() => {
+    const currentPoints = pointsRef.current;
+    const startIdx = Math.max(0, lastEmitIndexRef.current - 1); // overlap by 1 for smooth joining
+    if (startIdx >= currentPoints.length) return;
+
+    const segment = currentPoints.slice(startIdx);
+    if (segment.length < 2) return;
+
+    socket.current?.emit('draw:action', {
+      type: 'stroke',
+      points: segment,
+      color: tool === 'eraser' ? '#000' : color,
+      brushSize,
+      tool: tool as 'pen' | 'eraser',
+      strokeId: strokeIdRef.current || undefined,
+      timestamp: Date.now(),
+      playerId: '',
+    });
+
+    lastEmitIndexRef.current = currentPoints.length;
+    lastEmitTimeRef.current = Date.now();
+  }, [socket, tool, color, brushSize]);
+
   // Handle pointer events for drawing
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -158,6 +192,9 @@ export default function DrawingCanvas({
 
       isDrawingRef.current = true;
       pointsRef.current = [point];
+      strokeIdRef.current = crypto.randomUUID();
+      lastEmitIndexRef.current = 0;
+      lastEmitTimeRef.current = Date.now();
     };
 
     const handlePointerMove = (e: PointerEvent) => {
@@ -165,6 +202,13 @@ export default function DrawingCanvas({
       const point = getCanvasPoint(e);
       pointsRef.current.push(point);
       drawLine(pointsRef.current.slice(-2), tool === 'eraser' ? '#000' : color, brushSize, tool === 'eraser');
+
+      // Emit partial stroke if enough time/points have passed
+      const now = Date.now();
+      const newPointsSinceEmit = pointsRef.current.length - lastEmitIndexRef.current;
+      if (now - lastEmitTimeRef.current >= EMIT_INTERVAL_MS && newPointsSinceEmit >= MIN_POINTS_TO_EMIT) {
+        emitPartialStroke();
+      }
     };
 
     const handlePointerUp = () => {
@@ -173,17 +217,11 @@ export default function DrawingCanvas({
 
       if (pointsRef.current.length > 0) {
         saveToHistory();
-        socket.current?.emit('draw:action', {
-          type: 'stroke',
-          points: pointsRef.current,
-          color: tool === 'eraser' ? '#000' : color,
-          brushSize,
-          tool: tool as 'pen' | 'eraser',
-          timestamp: Date.now(),
-          playerId: '',
-        });
+        // Emit any remaining un-emitted points
+        emitPartialStroke();
       }
       pointsRef.current = [];
+      strokeIdRef.current = null;
     };
 
     canvas.addEventListener('pointerdown', handlePointerDown);
@@ -197,7 +235,7 @@ export default function DrawingCanvas({
       canvas.removeEventListener('pointerup', handlePointerUp);
       canvas.removeEventListener('pointerleave', handlePointerUp);
     };
-  }, [isDrawer, tool, color, brushSize, getCanvasPoint, drawLine, floodFill, saveToHistory, socket]);
+  }, [isDrawer, tool, color, brushSize, getCanvasPoint, drawLine, floodFill, saveToHistory, socket, emitPartialStroke]);
 
   // Undo: restore previous canvas state from history
   const undoCanvas = useCallback(() => {

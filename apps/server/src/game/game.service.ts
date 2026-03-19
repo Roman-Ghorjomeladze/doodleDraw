@@ -15,6 +15,7 @@ import { RoomService } from './room.service';
 import { ClassicModeService } from './classic-mode.service';
 import { TeamModeService } from './team-mode.service';
 import { WordsService } from '../words/words.service';
+import { RoomPersistenceService } from './room-persistence.service';
 import { generateHint, revealLetter } from './utils/hints';
 import { levenshteinDistance } from './utils/levenshtein';
 import { calculateGuessScore, calculateDrawerScore } from './utils/scoring';
@@ -43,6 +44,7 @@ export class GameService {
     private readonly classicMode: ClassicModeService,
     private readonly teamMode: TeamModeService,
     private readonly wordsService: WordsService,
+    private readonly persistence: RoomPersistenceService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -75,6 +77,8 @@ export class GameService {
 
     // Start the first turn.
     await this.nextTurn(room, server);
+
+    this.persistence.persistRoom(room);
   }
 
   // ---------------------------------------------------------------------------
@@ -245,6 +249,8 @@ export class GameService {
 
     // Start the round timer.
     this.startRoundTimer(roomId, server);
+
+    this.persistence.persistRoom(room);
   }
 
   // ---------------------------------------------------------------------------
@@ -362,6 +368,8 @@ export class GameService {
     if (room.mode === 'team') {
       this.resolveTeamRound(room, server);
     }
+
+    this.persistence.persistRoom(room);
 
     // After delay, proceed to next turn or end game.
     setTimeout(() => {
@@ -669,6 +677,9 @@ export class GameService {
     }
 
     this.logger.log(`Game ended in room ${room.id} – winner: ${winner}`);
+
+    this.persistence.persistRoom(room);
+    this.persistence.markCompleted(room.id);
   }
 
   // ---------------------------------------------------------------------------
@@ -886,6 +897,8 @@ export class GameService {
     server.to(roomId).emit('room:updated', { room: this.roomService.serializeRoom(room) });
 
     this.logger.log(`Room ${roomId} reset to lobby (player left mid-game)`);
+
+    this.persistence.persistRoom(room);
   }
 
   // ---------------------------------------------------------------------------
@@ -1009,6 +1022,8 @@ export class GameService {
     }, 1500);
 
     this.logger.log(`Rematch starting in room ${room.id}`);
+
+    this.persistence.persistRoom(room);
   }
 
   // ---------------------------------------------------------------------------

@@ -141,7 +141,7 @@ export default function ScoreBoard() {
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-surface-800 rounded-card shadow-game-lg p-6"
+        className="bg-white dark:bg-surface-800 rounded-card shadow-game-lg p-6 min-w-[min(24rem,90vw)] min-h-[20rem]"
       >
         <h2 className="text-2xl font-bold text-center mb-6">{t('score.gameOver')}</h2>
 

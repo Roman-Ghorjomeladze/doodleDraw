@@ -5,6 +5,7 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import { Language, LanguageSchema } from './schemas/language.schema';
 import { Word, WordSchema } from './schemas/word.schema';
+import { RoomDoc, RoomDocSchema } from './schemas/room.schema';
 
 @Global()
 @Module({
@@ -19,6 +20,7 @@ import { Word, WordSchema } from './schemas/word.schema';
     MongooseModule.forFeature([
       { name: Language.name, schema: LanguageSchema },
       { name: Word.name, schema: WordSchema },
+      { name: RoomDoc.name, schema: RoomDocSchema },
     ]),
   ],
   exports: [MongooseModule],

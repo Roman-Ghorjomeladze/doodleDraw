@@ -14,10 +14,11 @@ import type {
 } from './game-types';
 
 export interface ClientToServerEvents {
-  'room:create': (data: { mode: GameMode; nickname: string; avatar: string }) => void;
-  'room:join': (data: { roomId: string; nickname: string; avatar: string }) => void;
+  'room:create': (data: { mode: GameMode; nickname: string; avatar: string; persistentId: string }) => void;
+  'room:join': (data: { roomId: string; nickname: string; avatar: string; persistentId: string }) => void;
   'room:leave': () => void;
   'room:settings': (data: Partial<RoomSettings>) => void;
+  'room:kick': (data: { playerId: string }) => void;
   'game:start': () => void;
   'game:startCountdown': () => void;
   'game:cancelCountdown': () => void;
@@ -28,8 +29,8 @@ export interface ClientToServerEvents {
   'chat:message': (data: { text: string }) => void;
   'player:update': (data: { nickname?: string; avatar?: string }) => void;
   'team:switch': (data: { team: Team }) => void;
-  'game:reconnect': (data: { roomId: string; playerId: string }) => void;
-  'room:spectate': (data: { roomId: string; nickname: string; avatar: string }) => void;
+  'game:reconnect': (data: { roomId?: string; persistentId: string }) => void;
+  'room:spectate': (data: { roomId: string; nickname: string; avatar: string; persistentId: string }) => void;
   'rooms:list': () => void;
   'rooms:ongoingList': () => void;
   'game:rematchVote': (data: { vote: 'accepted' | 'declined' }) => void;
@@ -42,6 +43,7 @@ export interface ServerToClientEvents {
   'room:playerJoined': (data: { player: import('./game-types').Player }) => void;
   'room:playerLeft': (data: { playerId: string; nickname: string; wasInGame: boolean }) => void;
   'room:error': (data: { message: string }) => void;
+  'room:kicked': (data: { reason?: string }) => void;
   'game:phaseChange': (data: { phase: GamePhase; context?: Record<string, unknown> }) => void;
   'game:wordOptions': (data: { words: { word: string; difficulty: number }[] }) => void;
   'game:roundStart': (data: {

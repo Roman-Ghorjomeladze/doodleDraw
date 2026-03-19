@@ -65,14 +65,33 @@ export class DrawingService {
       return;
     }
 
-    // Find and remove the last stroke action by this player.
+    // Find the last stroke action by this player and get its strokeId.
+    let targetStrokeId: string | undefined;
     for (let i = room.drawingHistory.length - 1; i >= 0; i--) {
       if (
         room.drawingHistory[i].playerId === playerId &&
         room.drawingHistory[i].type === 'stroke'
       ) {
-        room.drawingHistory.splice(i, 1);
+        targetStrokeId = room.drawingHistory[i].strokeId;
         break;
+      }
+    }
+
+    if (targetStrokeId) {
+      // Remove all actions with the same strokeId (streaming partial strokes).
+      room.drawingHistory = room.drawingHistory.filter(
+        (a) => a.strokeId !== targetStrokeId,
+      );
+    } else {
+      // Fallback: remove just the last stroke by this player.
+      for (let i = room.drawingHistory.length - 1; i >= 0; i--) {
+        if (
+          room.drawingHistory[i].playerId === playerId &&
+          room.drawingHistory[i].type === 'stroke'
+        ) {
+          room.drawingHistory.splice(i, 1);
+          break;
+        }
       }
     }
 

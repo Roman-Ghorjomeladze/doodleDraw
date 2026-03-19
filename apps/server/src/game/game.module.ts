@@ -6,10 +6,12 @@ import { ClassicModeService } from './classic-mode.service';
 import { TeamModeService } from './team-mode.service';
 import { DrawingService } from './drawing.service';
 import { GameGateway } from './game.gateway';
+import { RoomPersistenceService } from './room-persistence.service';
 
 @Module({
   imports: [WordsModule],
   providers: [
+    RoomPersistenceService,
     RoomService,
     GameService,
     ClassicModeService,

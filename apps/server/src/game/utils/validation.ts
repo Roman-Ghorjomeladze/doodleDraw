@@ -11,6 +11,9 @@ import type { DrawAction, GameMode, RoomSettings, Team } from '@doodledraw/share
 // Constants
 // ---------------------------------------------------------------------------
 
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_PERSISTENT_ID_LENGTH = 36;
+const MAX_STROKE_ID_LENGTH = 64;
 const MAX_NICKNAME_LENGTH = 20;
 const MIN_NICKNAME_LENGTH = 1;
 const MAX_CHAT_MESSAGE_LENGTH = 200;
@@ -85,6 +88,13 @@ export function validateTeam(raw: unknown): Team | null {
   if (typeof raw !== 'string') return null;
   if (!VALID_TEAMS.includes(raw as Team)) return null;
   return raw as Team;
+}
+
+export function validatePersistentId(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  if (raw.length > MAX_PERSISTENT_ID_LENGTH) return null;
+  if (!UUID_V4_REGEX.test(raw)) return null;
+  return raw;
 }
 
 export function validateWordIndex(raw: unknown): number | null {
@@ -164,6 +174,14 @@ export function validateDrawAction(raw: unknown): DrawAction | null {
       return null;
     }
     action.tool = obj.tool as DrawAction['tool'];
+  }
+
+  // Stroke ID (for streaming partial strokes)
+  if (obj.strokeId !== undefined) {
+    if (typeof obj.strokeId !== 'string' || obj.strokeId.length > MAX_STROKE_ID_LENGTH) {
+      return null;
+    }
+    action.strokeId = obj.strokeId;
   }
 
   return action;
