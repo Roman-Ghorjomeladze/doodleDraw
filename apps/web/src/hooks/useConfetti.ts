@@ -16,10 +16,25 @@ export function useConfetti() {
     const unsubscribers: (() => void)[] = [];
 
     // Small burst when current player guesses correctly
+    // On mobile: blur input → scroll to canvas → delay → fire confetti
     unsubscribers.push(
       on('chat:correctGuess', ({ playerId }) => {
         const myId = usePlayerStore.getState().playerId;
-        if (playerId === myId) {
+        if (playerId !== myId) return;
+
+        // Blur active input to close mobile keyboard
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+
+        // Scroll canvas into view
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+          canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Delay confetti so keyboard closes and scroll finishes
+        setTimeout(() => {
           confetti({
             particleCount: 60,
             spread: 55,
@@ -27,7 +42,7 @@ export function useConfetti() {
             colors: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff6b9d'],
             disableForReducedMotion: true,
           });
-        }
+        }, 400);
       }),
     );
 

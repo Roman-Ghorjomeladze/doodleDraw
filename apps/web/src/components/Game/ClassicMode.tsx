@@ -114,8 +114,8 @@ export default function ClassicMode() {
       {/* Main Game Layout */}
       {(phase === 'drawing' || phase === 'round_end') && (
         <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_280px] gap-4">
-          {/* Left Sidebar - Players */}
-          <div className="hidden lg:block">
+          {/* Left Sidebar - Players (sticky, doesn't stretch) */}
+          <div className="hidden lg:block self-start sticky top-4">
             <div className="bg-white dark:bg-surface-800 rounded-card shadow-game p-3">
               <h3 className="font-semibold text-sm mb-2">{t('lobby.players')}</h3>
               <PlayerList players={players} mode="classic" showScores onPlayerClick={setProfileId} />
