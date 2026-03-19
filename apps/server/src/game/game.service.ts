@@ -524,6 +524,12 @@ export class GameService {
     room.correctGuessers = [];
     room.drawingHistory = [];
 
+    // Clear the per-round drawer score tracker so the next drawer's
+    // cumulative score isn't overwritten by a stale snapshot.
+    for (const player of room.players.values()) {
+      delete (player as any)._prevRoundScore;
+    }
+
     // Fetch words BEFORE setting phase so that room.pendingWords and
     // room.phase are always consistent.  If a reconnection happens during
     // this await, the phase is still the previous one (e.g. round_end)
@@ -575,6 +581,11 @@ export class GameService {
     room.wordHint = '';
     room.correctGuessers = [];
     room.drawingHistory = [];
+
+    // Clear the per-round drawer score tracker (same as presentWordOptions).
+    for (const player of room.players.values()) {
+      delete (player as any)._prevRoundScore;
+    }
 
     // Pick a word from the drawer's history.
     const drawerId = room.mode === 'classic' ? room.drawerId : room.teamADrawerId;
