@@ -113,9 +113,9 @@ export default function ClassicMode() {
 
       {/* Main Game Layout */}
       {(phase === 'drawing' || phase === 'round_end') && (
-        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_280px] gap-4">
-          {/* Left Sidebar - Players (sticky, doesn't stretch) */}
-          <div className="hidden lg:block self-start sticky top-4">
+        <div className="flex gap-4">
+          {/* Left Sidebar - Players (sticky) */}
+          <div className="hidden lg:block w-[200px] flex-shrink-0 self-start sticky top-4">
             <div className="bg-white dark:bg-surface-800 rounded-card shadow-game p-3">
               <h3 className="font-semibold text-sm mb-2">{t('lobby.players')}</h3>
               <PlayerList players={players} mode="classic" showScores onPlayerClick={setProfileId} />
@@ -123,7 +123,7 @@ export default function ClassicMode() {
           </div>
 
           {/* Center - Canvas */}
-          <div className="space-y-3">
+          <div className="flex-1 min-w-0 flex flex-col gap-3">
             {/* Top Bar */}
             <div className="flex items-center bg-white dark:bg-surface-800 rounded-card shadow-game px-3 sm:px-4 py-2 gap-2 overflow-hidden">
               <div className="text-xs sm:text-sm text-surface-500 whitespace-nowrap flex-shrink-0">{t('game.round', { number: currentRound })}</div>
@@ -150,7 +150,7 @@ export default function ClassicMode() {
               <DrawingCanvas isDrawer={isDrawer && phase === 'drawing'} isBlurred={false} />
             </div>
 
-            {/* Reaction Bar + Drawing Tools */}
+            {/* Reaction Bar + Drawing Tools — last item on desktop, no bottom gap */}
             {isDrawer && phase === 'drawing' ? (
               <div className="space-y-2">
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -174,7 +174,7 @@ export default function ClassicMode() {
           </div>
 
           {/* Right Sidebar - Chat (desktop) — stretches to match center column */}
-          <div className="hidden lg:flex lg:flex-col min-h-[400px]">
+          <div className="hidden lg:flex w-[280px] flex-shrink-0">
             <GuessingChat isDrawer={isDrawer} />
           </div>
         </div>

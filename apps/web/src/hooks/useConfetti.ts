@@ -22,9 +22,20 @@ export function useConfetti() {
         const myId = usePlayerStore.getState().playerId;
         if (playerId !== myId) return;
 
-        // Blur active input to close mobile keyboard
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
+        // Close mobile keyboard — create temporary focusable element to steal focus from input
+        const active = document.activeElement;
+        if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+          const tmp = document.createElement('input');
+          tmp.setAttribute('type', 'text');
+          tmp.setAttribute('readonly', 'true');
+          tmp.style.position = 'fixed';
+          tmp.style.opacity = '0';
+          tmp.style.height = '0';
+          tmp.style.fontSize = '16px'; // prevents iOS zoom
+          document.body.appendChild(tmp);
+          tmp.focus();
+          tmp.blur();
+          document.body.removeChild(tmp);
         }
 
         // Scroll canvas into view

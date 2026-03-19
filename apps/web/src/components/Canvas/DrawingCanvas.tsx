@@ -192,7 +192,12 @@ export default function DrawingCanvas({
 
       isDrawingRef.current = true;
       pointsRef.current = [point];
-      strokeIdRef.current = crypto.randomUUID();
+      strokeIdRef.current = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = (Math.random() * 16) | 0;
+            return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+          });
       lastEmitIndexRef.current = 0;
       lastEmitTimeRef.current = Date.now();
     };
@@ -289,8 +294,16 @@ export default function DrawingCanvas({
     };
   }, [on, listenEvent, drawLine, floodFill, getCtx, saveToHistory, undoCanvas]);
 
-  // Clear canvas when isDrawer changes (new round) or on mount
+  // Clear canvas only when becoming the drawer (new round starting).
+  // Don't clear when isDrawer goes false (round ending) — keep the drawing visible.
+  const prevIsDrawerRef = useRef(isDrawer);
   useEffect(() => {
+    const wasDrawer = prevIsDrawerRef.current;
+    prevIsDrawerRef.current = isDrawer;
+
+    // Only clear when transitioning TO drawer, or on initial mount
+    if (!isDrawer && wasDrawer) return; // round ended, keep drawing visible
+
     const ctx = getCtx();
     if (ctx && canvasRef.current) {
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);

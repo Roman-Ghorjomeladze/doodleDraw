@@ -3,6 +3,17 @@ import { persist } from 'zustand/middleware';
 import { AVATAR_SEEDS } from '@doodledraw/shared';
 import type { AuthUser } from '@doodledraw/shared';
 
+/** crypto.randomUUID() is unavailable in non-secure (HTTP) contexts */
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 interface PlayerState {
   nickname: string;
   avatar: string;
@@ -27,7 +38,7 @@ export const usePlayerStore = create<PlayerStore>()(
       nickname: '',
       avatar: AVATAR_SEEDS[Math.floor(Math.random() * AVATAR_SEEDS.length)],
       playerId: null,
-      persistentId: crypto.randomUUID(),
+      persistentId: generateUUID(),
       isSpectator: false,
 
       setNickname: (nickname) => set({ nickname }),
@@ -66,7 +77,7 @@ export const usePlayerStore = create<PlayerStore>()(
         if (version < 3) {
           // Generate persistentId if missing
           if (!state.persistentId) {
-            state.persistentId = crypto.randomUUID();
+            state.persistentId = generateUUID();
           }
         }
         return persisted;
