@@ -173,8 +173,8 @@ export default function ClassicMode() {
             </div>
           </div>
 
-          {/* Right Sidebar - Chat (desktop) */}
-          <div className="hidden lg:block h-[calc(100vh-200px)] min-h-[400px]">
+          {/* Right Sidebar - Chat (desktop) — stretches to match center column */}
+          <div className="hidden lg:flex lg:flex-col min-h-[400px]">
             <GuessingChat isDrawer={isDrawer} />
           </div>
         </div>

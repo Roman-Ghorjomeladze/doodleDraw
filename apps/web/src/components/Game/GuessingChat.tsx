@@ -5,6 +5,7 @@ import { usePlayerStore } from '@/stores/playerStore';
 import { useGame } from '@/hooks/useGame';
 import { useTranslation } from '@/i18n';
 import { getAvatarSvg } from '@/utils/avatars';
+import { useSocket } from '@/hooks/useSocket';
 
 interface GuessingChatProps {
   isDrawer: boolean;
@@ -27,10 +28,19 @@ export default function GuessingChat({ isDrawer, isLobby, invertLayout, onExpand
   const { messages, players } = useGameStore();
   const { isSpectator } = usePlayerStore();
   const { sendGuess } = useGame();
+  const { on } = useSocket();
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const isNearEdgeRef = useRef(true);
+
+  // Blur input (close mobile keyboard) on correct guess
+  useEffect(() => {
+    return on('chat:correctGuess', () => {
+      inputRef.current?.blur();
+    });
+  }, [on]);
 
   const disabled = !isLobby && isDrawer && !isSpectator;
 
@@ -90,6 +100,7 @@ export default function GuessingChat({ isDrawer, isLobby, invertLayout, onExpand
   const inputForm = (
     <form onSubmit={handleSubmit} className={`p-2 ${invertLayout ? 'border-b' : 'border-t'} border-surface-200 dark:border-surface-700`}>
       <input
+        ref={inputRef}
         type="text"
         value={input}
         onChange={e => setInput(e.target.value)}
