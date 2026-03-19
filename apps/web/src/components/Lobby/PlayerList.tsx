@@ -12,9 +12,10 @@ interface PlayerListProps {
   onSwitchTeam?: (team: Team) => void;
   currentPlayerId?: string;
   onKickPlayer?: (playerId: string) => void;
+  onPlayerClick?: (persistentId: string) => void;
 }
 
-export default function PlayerList({ players, mode, showScores = false, teamAName, teamBName, onSwitchTeam, currentPlayerId, onKickPlayer }: PlayerListProps) {
+export default function PlayerList({ players, mode, showScores = false, teamAName, teamBName, onSwitchTeam, currentPlayerId, onKickPlayer, onPlayerClick }: PlayerListProps) {
   const { t } = useTranslation();
   const teamA = mode === 'team' ? players.filter(p => p.team === 'A') : [];
   const teamB = mode === 'team' ? players.filter(p => p.team === 'B') : [];
@@ -37,6 +38,7 @@ export default function PlayerList({ players, mode, showScores = false, teamANam
           onSwitchTeam={onSwitchTeam}
           currentPlayerId={currentPlayerId}
           onKickPlayer={onKickPlayer}
+          onPlayerClick={onPlayerClick}
         />
         <TeamSection
           team="B"
@@ -51,12 +53,13 @@ export default function PlayerList({ players, mode, showScores = false, teamANam
           onSwitchTeam={onSwitchTeam}
           currentPlayerId={currentPlayerId}
           onKickPlayer={onKickPlayer}
+          onPlayerClick={onPlayerClick}
         />
       </div>
     );
   }
 
-  return <PlayerGroup players={players} showScores={showScores} currentPlayerId={currentPlayerId} onKickPlayer={onKickPlayer} />;
+  return <PlayerGroup players={players} showScores={showScores} currentPlayerId={currentPlayerId} onKickPlayer={onKickPlayer} onPlayerClick={onPlayerClick} />;
 }
 
 function TeamSection({
@@ -72,6 +75,7 @@ function TeamSection({
   onSwitchTeam,
   currentPlayerId,
   onKickPlayer,
+  onPlayerClick,
 }: {
   team: Team;
   teamName: string;
@@ -85,6 +89,7 @@ function TeamSection({
   onSwitchTeam?: (team: Team) => void;
   currentPlayerId?: string;
   onKickPlayer?: (playerId: string) => void;
+  onPlayerClick?: (persistentId: string) => void;
 }) {
   const { t } = useTranslation();
 
@@ -105,12 +110,12 @@ function TeamSection({
           </motion.button>
         )}
       </div>
-      <PlayerGroup players={players} showScores={showScores} currentPlayerId={currentPlayerId} onKickPlayer={onKickPlayer} />
+      <PlayerGroup players={players} showScores={showScores} currentPlayerId={currentPlayerId} onKickPlayer={onKickPlayer} onPlayerClick={onPlayerClick} />
     </div>
   );
 }
 
-function PlayerGroup({ players, showScores, currentPlayerId, onKickPlayer }: { players: Player[]; showScores: boolean; currentPlayerId?: string; onKickPlayer?: (playerId: string) => void }) {
+function PlayerGroup({ players, showScores, currentPlayerId, onKickPlayer, onPlayerClick }: { players: Player[]; showScores: boolean; currentPlayerId?: string; onKickPlayer?: (playerId: string) => void; onPlayerClick?: (persistentId: string) => void }) {
   const { t } = useTranslation();
   return (
     <div className="space-y-1.5">
@@ -122,9 +127,10 @@ function PlayerGroup({ players, showScores, currentPlayerId, onKickPlayer }: { p
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             layout
+            onClick={() => onPlayerClick?.(player.persistentId)}
             className={`flex items-center gap-2.5 py-2 px-3 rounded-button ${
               player.isDrawing ? 'bg-primary-50 dark:bg-primary-900/20' : 'bg-surface-50 dark:bg-surface-800'
-            } ${!player.isConnected ? 'opacity-50' : ''}`}
+            } ${!player.isConnected ? 'opacity-50' : ''} ${onPlayerClick ? 'cursor-pointer hover:ring-2 hover:ring-primary-300 dark:hover:ring-primary-600 transition-shadow' : ''}`}
           >
             <Avatar seed={player.avatar} size={32} className="shrink-0" />
             <div className="flex-1 min-w-0">

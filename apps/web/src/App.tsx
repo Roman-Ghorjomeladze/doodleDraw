@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useGameEvents } from '@/hooks/useGameEvents';
+import { useConfetti } from '@/hooks/useConfetti';
 import { useUrlSync } from '@/hooks/useUrlSync';
 import HomePage from '@/components/Lobby/HomePage';
 import RoomLobby from '@/components/Lobby/RoomLobby';
@@ -18,6 +19,7 @@ export default function App() {
 
   // Register socket event listeners once at the top level
   useGameEvents();
+  useConfetti();
 
   // Sync URL with game room state
   useUrlSync();

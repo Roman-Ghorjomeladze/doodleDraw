@@ -62,3 +62,9 @@ export const DEFAULT_ROOM_SETTINGS = {
 
 export const HANDICAP_COLORS = ['#000000', '#FF0000', '#0000FF', '#00FF00'] as const;
 export const HANDICAP_MIN_BRUSH_SIZE = 20;
+
+export const REACTION_EMOJIS = [
+  '🎉', '💀', '🏆', '🎯', '🤡', '💩',
+  '😭', '🤣', '👀', '😵‍💫', '🥱', '💤',
+  '😬', '🤷', '👎', '😍', '😂', '🔥',
+] as const;

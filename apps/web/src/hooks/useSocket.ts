@@ -85,13 +85,26 @@ function attachConnectionEvents(s: TypedSocket) {
   });
 }
 
+function getAuthToken(): string | undefined {
+  try {
+    const stored = localStorage.getItem('doodledraw-auth');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed?.state?.token || undefined;
+    }
+  } catch {}
+  return undefined;
+}
+
 function createSocket(): TypedSocket {
+  const token = getAuthToken();
   const s = io('/game', {
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
+    auth: token ? { token } : undefined,
   });
   socketInstance = s;
   attachConnectionEvents(s);
@@ -101,6 +114,20 @@ function createSocket(): TypedSocket {
     setConnectionState({ connected: true });
   }
   return s;
+}
+
+/**
+ * Destroy the current socket and create a new one with updated auth.
+ * Call this after login/register/logout to propagate the auth token.
+ */
+export function reconnectWithAuth(): void {
+  if (socketInstance) {
+    socketInstance.removeAllListeners();
+    socketInstance.io.removeAllListeners();
+    socketInstance.disconnect();
+    socketInstance = null;
+  }
+  createSocket();
 }
 
 function getSocket(): TypedSocket {

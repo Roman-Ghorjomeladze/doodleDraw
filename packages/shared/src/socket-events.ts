@@ -11,6 +11,8 @@ import type {
   PublicRoomInfo,
   OngoingGameInfo,
   RematchState,
+  PlayerProfile,
+  LeaderboardEntry,
 } from './game-types';
 
 export interface ClientToServerEvents {
@@ -34,6 +36,9 @@ export interface ClientToServerEvents {
   'rooms:list': () => void;
   'rooms:ongoingList': () => void;
   'game:rematchVote': (data: { vote: 'accepted' | 'declined' }) => void;
+  'reaction:send': (data: { emoji: string }) => void;
+  'profile:get': (data: { persistentId: string }) => void;
+  'leaderboard:get': (data: { type: 'allTime' | 'weekly' | 'country' | 'age'; country?: string; ageGroup?: string }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -94,4 +99,7 @@ export interface ServerToClientEvents {
   'rooms:ongoingUpdated': (data: { rooms: OngoingGameInfo[] }) => void;
   'game:rematchUpdate': (data: { rematchState: RematchState }) => void;
   'game:rematchStart': () => void;
+  'reaction:received': (data: { emoji: string; nickname: string; playerId: string }) => void;
+  'profile:data': (data: { profile: PlayerProfile | null }) => void;
+  'leaderboard:data': (data: { players: LeaderboardEntry[]; type: string }) => void;
 }

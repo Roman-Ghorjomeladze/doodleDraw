@@ -11,6 +11,8 @@ import Timer from './Timer';
 import WordDisplay from './WordDisplay';
 import ScoreBoard from './ScoreBoard';
 import GameLeaveButton from '@/components/UI/GameLeaveButton';
+import ReactionBar from './ReactionBar';
+import FloatingReactions from './FloatingReactions';
 
 export default function TeamMode() {
 	const {
@@ -158,6 +160,7 @@ export default function TeamMode() {
 
 						{/* Canvas Area — own team large, opponent PiP in corner */}
 						<div className='relative'>
+							<FloatingReactions />
 							{/* Own team canvas (full size) */}
 							<div>
 								<div className={`text-center text-sm font-bold ${myTeamColor} mb-2`}>{myTeamName}</div>
@@ -191,11 +194,20 @@ export default function TeamMode() {
 							</div>
 						</div>
 
-						{/* Drawing Tools */}
-						{isDrawer && phase === 'drawing' && (
-							<div className='flex flex-col sm:flex-row gap-3'>
-								<ToolBar />
-								<ColorPalette />
+						{/* Drawing Tools + Reaction Bar */}
+						{isDrawer && phase === 'drawing' ? (
+							<div className='space-y-2'>
+								<div className='flex flex-col sm:flex-row gap-3'>
+									<ToolBar />
+									<ColorPalette />
+								</div>
+								<div className='bg-white dark:bg-surface-800 rounded-card shadow-game'>
+									<ReactionBar />
+								</div>
+							</div>
+						) : (
+							<div className='bg-white dark:bg-surface-800 rounded-card shadow-game'>
+								<ReactionBar />
 							</div>
 						)}
 

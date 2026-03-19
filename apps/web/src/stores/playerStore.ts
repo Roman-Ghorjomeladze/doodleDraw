@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AVATAR_SEEDS } from '@doodledraw/shared';
+import type { AuthUser } from '@doodledraw/shared';
 
 interface PlayerState {
   nickname: string;
@@ -15,6 +16,7 @@ interface PlayerActions {
   setAvatar: (avatar: string) => void;
   setPlayerId: (id: string | null) => void;
   setIsSpectator: (isSpectator: boolean) => void;
+  syncFromAuth: (user: AuthUser) => void;
 }
 
 export type PlayerStore = PlayerState & PlayerActions;
@@ -35,6 +37,13 @@ export const usePlayerStore = create<PlayerStore>()(
       setPlayerId: (playerId) => set({ playerId }),
 
       setIsSpectator: (isSpectator) => set({ isSpectator }),
+
+      syncFromAuth: (user) =>
+        set({
+          nickname: user.nickname,
+          avatar: user.avatar,
+          persistentId: user.persistentId,
+        }),
     }),
     {
       name: 'doodledraw-player',

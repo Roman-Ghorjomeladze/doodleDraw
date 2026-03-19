@@ -104,8 +104,8 @@ function RematchAvatars() {
   );
 }
 
-export default function ScoreBoard() {
-  const { scores, mode, teamAScore, teamBScore, settings, rematchState } = useGameStore();
+export default function ScoreBoard({ onPlayerClick }: { onPlayerClick?: (persistentId: string) => void } = {}) {
+  const { scores, mode, teamAScore, teamBScore, settings, rematchState, players: allPlayers } = useGameStore();
   const { isSpectator, playerId: currentPlayerId } = usePlayerStore();
   const { leaveRoom, rematchVote } = useGame();
   const { t } = useTranslation();
@@ -197,7 +197,11 @@ export default function ScoreBoard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-3"
+                onClick={() => {
+                  const p = allPlayers.find((pl) => pl.id === score.playerId);
+                  if (p && onPlayerClick) onPlayerClick(p.persistentId);
+                }}
+                className={`flex items-center gap-3 ${onPlayerClick ? 'cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-700/50 rounded-lg p-1 -m-1 transition-colors' : ''}`}
               >
                 <div className="w-8 text-center font-bold text-lg">
                   {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}

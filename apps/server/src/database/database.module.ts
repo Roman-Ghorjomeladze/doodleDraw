@@ -6,6 +6,8 @@ import { Connection } from 'mongoose';
 import { Language, LanguageSchema } from './schemas/language.schema';
 import { Word, WordSchema } from './schemas/word.schema';
 import { RoomDoc, RoomDocSchema } from './schemas/room.schema';
+import { ProfileDoc, ProfileDocSchema } from './schemas/profile.schema';
+import { AuthTokenDoc, AuthTokenDocSchema } from './schemas/auth-token.schema';
 
 @Global()
 @Module({
@@ -21,6 +23,8 @@ import { RoomDoc, RoomDocSchema } from './schemas/room.schema';
       { name: Language.name, schema: LanguageSchema },
       { name: Word.name, schema: WordSchema },
       { name: RoomDoc.name, schema: RoomDocSchema },
+      { name: ProfileDoc.name, schema: ProfileDocSchema },
+      { name: AuthTokenDoc.name, schema: AuthTokenDocSchema },
     ]),
   ],
   exports: [MongooseModule],

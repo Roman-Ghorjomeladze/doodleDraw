@@ -153,3 +153,58 @@ export interface Handicap {
   minBrushSize: number;
   availableColors: string[];
 }
+
+export interface PlayerProfile {
+  persistentId: string;
+  nickname: string;
+  avatar: string;
+  totalGames: number;
+  totalWins: number;
+  totalScore: number;
+  correctGuesses: number;
+  totalDrawings: number;
+  favoriteWord: string | null;
+  country?: string;
+  birthYear?: number;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  persistentId: string;
+  nickname: string;
+  avatar: string;
+  totalScore: number;
+  totalWins: number;
+  totalGames: number;
+  country?: string;
+}
+
+export interface AuthRegisterRequest {
+  username: string;
+  password: string;
+  nickname: string;
+  avatar: string;
+  country: string;
+  birthYear: number;
+  persistentId: string;
+}
+
+export interface AuthLoginRequest {
+  username: string;
+  password: string;
+  persistentId?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export interface AuthUser {
+  username: string;
+  nickname: string;
+  avatar: string;
+  country: string;
+  birthYear: number;
+  persistentId: string;
+}

@@ -1,8 +1,17 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useAuthStore } from '@/stores/authStore';
+import { usePlayerStore } from '@/stores/playerStore';
 import type { FontSize, FontFamily, Language, HomeLayout } from '@/stores/settingsStore';
 import { useTranslation } from '@/i18n';
 import ThemeToggle from './ThemeToggle';
+import AuthModal from '@/components/Auth/AuthModal';
+import { getAvatarDataUri } from '@/utils/avatars';
+import { authApi } from '@/utils/authApi';
+import { reconnectWithAuth } from '@/hooks/useSocket';
+import { COUNTRIES } from '@doodledraw/shared';
+import CountrySelect from '@/components/UI/CountrySelect';
 
 interface SettingsPanelProps {
   open: boolean;
@@ -30,7 +39,9 @@ const fontFamilyOptions: { value: FontFamily; label: string; sample: string }[] 
 
 export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const { fontSize, fontFamily, soundEnabled, language, homeLayout, setFontSize, setFontFamily, toggleSound, setLanguage, setHomeLayout } = useSettingsStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { t } = useTranslation();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   return (
     <AnimatePresence>
@@ -71,6 +82,26 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
             </div>
 
             <div className="space-y-6">
+              {/* Account */}
+              <div>
+                {isAuthenticated && user ? (
+                  <AccountSection />
+                ) : (
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-button shadow-md transition-all flex items-center justify-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    {t('auth.login')} / {t('auth.register')}
+                  </button>
+                )}
+              </div>
+
+              <div className="border-t border-surface-200 dark:border-surface-700" />
+
               {/* Language */}
               <div>
                 <label className="text-sm font-semibold text-surface-600 dark:text-surface-400 mb-2 block">
@@ -197,8 +228,122 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
               </div>
             </div>
           </motion.div>
+
+          {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+function AccountSection() {
+  const { user, clearAuth } = useAuthStore();
+  const { t } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const [editCountry, setEditCountry] = useState(user?.country || '');
+  const [editBirthYear, setEditBirthYear] = useState(user?.birthYear?.toString() || '');
+  const [saving, setSaving] = useState(false);
+
+  if (!user) return null;
+
+  const countryName = (COUNTRIES as readonly { code: string; name: string }[]).find(
+    (c) => c.code === user.country,
+  )?.name;
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch {}
+    clearAuth();
+    reconnectWithAuth();
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const updated = await authApi.updateProfile({
+        country: editCountry,
+        birthYear: parseInt(editBirthYear, 10),
+      });
+      useAuthStore.getState().updateUser(updated);
+      setEditing(false);
+    } catch {}
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary-500/30">
+          <img src={getAvatarDataUri(user.avatar)} alt={user.nickname} className="w-full h-full" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold truncate">{user.nickname}</div>
+          <div className="text-xs text-surface-500">@{user.username}</div>
+        </div>
+      </div>
+
+      {!editing ? (
+        <div className="space-y-1.5 text-sm mb-3">
+          {countryName && (
+            <div className="flex justify-between">
+              <span className="text-surface-500">{t('auth.country')}</span>
+              <span className="font-medium">{countryName}</span>
+            </div>
+          )}
+          {user.birthYear > 0 && (
+            <div className="flex justify-between">
+              <span className="text-surface-500">{t('auth.birthYear')}</span>
+              <span className="font-medium">{user.birthYear}</span>
+            </div>
+          )}
+          <button
+            onClick={() => setEditing(true)}
+            className="w-full mt-2 py-2 text-sm font-semibold bg-surface-100 dark:bg-surface-800 rounded-button hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+          >
+            {t('auth.editProfile')}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2 mb-3">
+          <CountrySelect
+            value={editCountry}
+            onChange={setEditCountry}
+            placeholder={t('leaderboard.selectCountry')}
+          />
+          <input
+            type="number"
+            value={editBirthYear}
+            onChange={(e) => setEditBirthYear(e.target.value)}
+            className="w-full px-3 py-2 rounded-button bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 text-sm"
+            min={1930}
+            max={new Date().getFullYear() - 5}
+            placeholder={t('auth.birthYear')}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 py-2 text-sm font-semibold bg-primary-500 text-white rounded-button"
+            >
+              {t('auth.saveProfile')}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="flex-1 py-2 text-sm font-semibold bg-surface-100 dark:bg-surface-800 rounded-button"
+            >
+              {t('common.close')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={handleLogout}
+        className="w-full py-2 text-sm font-semibold text-danger-500 bg-danger-50 dark:bg-danger-900/20 rounded-button hover:bg-danger-100 dark:hover:bg-danger-900/40 transition-colors"
+      >
+        {t('auth.logout')}
+      </button>
+    </div>
   );
 }

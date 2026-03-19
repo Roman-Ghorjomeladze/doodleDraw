@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
 import { usePlayerStore } from '@/stores/playerStore';
@@ -12,6 +13,9 @@ import WordDisplay from './WordDisplay';
 import ScoreBoard from './ScoreBoard';
 import PlayerList from '@/components/Lobby/PlayerList';
 import GameLeaveButton from '@/components/UI/GameLeaveButton';
+import ReactionBar from './ReactionBar';
+import FloatingReactions from './FloatingReactions';
+import ProfileModal from '@/components/Profile/ProfileModal';
 
 export default function ClassicMode() {
   const { phase, players, drawerId, wordHint, wordOptions, timeLeft, currentRound, scores, currentWord, isRedrawRound } = useGameStore();
@@ -19,10 +23,17 @@ export default function ClassicMode() {
   const { selectWord } = useGame();
   const { t } = useTranslation();
 
+  const [profileId, setProfileId] = useState<string | null>(null);
+
   const isDrawer = !isSpectator && drawerId === playerId;
 
   if (phase === 'game_end') {
-    return <ScoreBoard />;
+    return (
+      <>
+        <ScoreBoard onPlayerClick={setProfileId} />
+        <ProfileModal persistentId={profileId} onClose={() => setProfileId(null)} />
+      </>
+    );
   }
 
   return (
@@ -107,7 +118,7 @@ export default function ClassicMode() {
           <div className="hidden lg:block">
             <div className="bg-white dark:bg-surface-800 rounded-card shadow-game p-3">
               <h3 className="font-semibold text-sm mb-2">{t('lobby.players')}</h3>
-              <PlayerList players={players} mode="classic" showScores />
+              <PlayerList players={players} mode="classic" showScores onPlayerClick={setProfileId} />
             </div>
           </div>
 
@@ -133,14 +144,26 @@ export default function ClassicMode() {
               </motion.div>
             )}
 
-            {/* Canvas */}
-            <DrawingCanvas isDrawer={isDrawer && phase === 'drawing'} isBlurred={false} />
+            {/* Canvas with floating reactions */}
+            <div className="relative">
+              <FloatingReactions />
+              <DrawingCanvas isDrawer={isDrawer && phase === 'drawing'} isBlurred={false} />
+            </div>
 
-            {/* Drawing Tools (only for drawer) */}
-            {isDrawer && phase === 'drawing' && (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <ToolBar />
-                <ColorPalette />
+            {/* Reaction Bar + Drawing Tools */}
+            {isDrawer && phase === 'drawing' ? (
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <ToolBar />
+                  <ColorPalette />
+                </div>
+                <div className="bg-white dark:bg-surface-800 rounded-card shadow-game">
+                  <ReactionBar />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-surface-800 rounded-card shadow-game">
+                <ReactionBar />
               </div>
             )}
 
@@ -157,6 +180,7 @@ export default function ClassicMode() {
         </div>
       )}
 
+      <ProfileModal persistentId={profileId} onClose={() => setProfileId(null)} />
     </div>
   );
 }

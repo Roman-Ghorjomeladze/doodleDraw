@@ -38,6 +38,13 @@ export const EVENT_RATE_LIMITS: Record<string, RateLimitRule> = {
 
   // Team
   'team:switch': { max: 4, windowMs: 10_000 },
+
+  // Reactions
+  'reaction:send': { max: 3, windowMs: 5_000 },
+
+  // Profile & Leaderboard
+  'profile:get': { max: 5, windowMs: 10_000 },
+  'leaderboard:get': { max: 3, windowMs: 10_000 },
 };
 
 /** Global rate limit across ALL events from a single socket. */

@@ -15,10 +15,13 @@ import {
   DrawAction,
   RoomSettings,
   ChatMessage,
+  REACTION_EMOJIS,
 } from '@doodledraw/shared';
 import { RoomService } from './room.service';
 import { GameService } from './game.service';
 import { DrawingService } from './drawing.service';
+import { ProfileService } from './profile.service';
+import { AuthService } from '../auth/auth.service';
 import { RateLimiter } from './utils/rate-limiter';
 import {
   validateNickname,
@@ -52,6 +55,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   /** Grace period timers for when a drawer disconnects mid-round. */
   private readonly drawerDisconnectTimers = new Map<string, NodeJS.Timeout>();
 
+  /** Map socket ID → authenticated persistentId for logged-in users. */
+  private readonly authenticatedSockets = new Map<string, string>();
+
   @WebSocketServer()
   server!: Server;
 
@@ -59,6 +65,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
     private readonly drawingService: DrawingService,
+    private readonly profileService: ProfileService,
+    private readonly authService: AuthService,
   ) {}
 
   onModuleDestroy(): void {
@@ -91,14 +99,25 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   // Connection lifecycle
   // ---------------------------------------------------------------------------
 
-  handleConnection(client: Socket): void {
+  async handleConnection(client: Socket): Promise<void> {
     this.logger.log(`Client connected: ${client.id}`);
+
+    // Check for auth token in handshake.
+    const token = (client.handshake.auth as any)?.token;
+    if (token) {
+      const persistentId = await this.authService.validateToken(token);
+      if (persistentId) {
+        this.authenticatedSockets.set(client.id, persistentId);
+        this.logger.log(`Authenticated socket ${client.id} as ${persistentId}`);
+      }
+    }
   }
 
   handleDisconnect(client: Socket): void {
     this.logger.log(`Client disconnected: ${client.id}`);
 
-    // Clean up rate limiter state for this socket.
+    // Clean up auth and rate limiter state for this socket.
+    this.authenticatedSockets.delete(client.id);
     this.rateLimiter.removeSocket(client.id);
 
     const room = this.roomService.handleDisconnect(client.id);
@@ -893,6 +912,73 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Profile & Leaderboard
+  // ---------------------------------------------------------------------------
+
+  @SubscribeMessage('profile:get')
+  async handleProfileGet(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { persistentId: string },
+  ): Promise<void> {
+    if (this.throttle(client, 'profile:get')) return;
+
+    const persistentId = validatePersistentId(data?.persistentId);
+    if (!persistentId) {
+      client.emit('profile:data', { profile: null });
+      return;
+    }
+
+    const profile = await this.profileService.getProfile(persistentId);
+    client.emit('profile:data', { profile });
+  }
+
+  @SubscribeMessage('leaderboard:get')
+  async handleLeaderboardGet(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { type: 'allTime' | 'weekly' | 'country' | 'age'; country?: string; ageGroup?: string },
+  ): Promise<void> {
+    if (this.throttle(client, 'leaderboard:get')) return;
+
+    const validTypes = ['allTime', 'weekly', 'country', 'age'] as const;
+    const type = validTypes.includes(data?.type as any) ? data.type : 'allTime';
+    const players = await this.profileService.getLeaderboard(type, {
+      country: data?.country,
+      ageGroup: data?.ageGroup,
+    });
+    client.emit('leaderboard:data', { players, type });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reactions
+  // ---------------------------------------------------------------------------
+
+  @SubscribeMessage('reaction:send')
+  handleReaction(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { emoji: string },
+  ): void {
+    if (this.throttle(client, 'reaction:send')) return;
+
+    const room = this.roomService.getRoomForPlayer(client.id);
+    if (!room) return;
+
+    const player = room.players.get(client.id);
+    if (!player) return;
+
+    // Validate emoji is in allowed list.
+    if (!data?.emoji || !(REACTION_EMOJIS as readonly string[]).includes(data.emoji)) {
+      return;
+    }
+
+    // Broadcast to entire room (including sender for instant feedback).
+    this.server.to(room.id).emit('reaction:received', {
+      emoji: data.emoji,
+      nickname: player.nickname,
+      playerId: client.id,
+    });
   }
 
   // ---------------------------------------------------------------------------

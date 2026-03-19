@@ -196,4 +196,52 @@ export const ru: Translations = {
   // Theme
   'theme.switchToLight': 'Переключить на светлый режим',
   'theme.switchToDark': 'Переключить на тёмный режим',
+
+  // Profile
+  'profile.noData': 'No profile data yet',
+  'profile.gamesPlayed': 'Games',
+  'profile.wins': 'Wins',
+  'profile.winRate': 'Win Rate',
+  'profile.totalScore': 'Total Score',
+  'profile.correctGuesses': 'Guesses',
+  'profile.drawings': 'Drawings',
+  'profile.favoriteWord': 'Favorite Word',
+
+  // Leaderboard
+  'leaderboard.title': 'Leaderboard',
+  'leaderboard.allTime': 'All Time',
+  'leaderboard.thisWeek': 'This Week',
+  'leaderboard.noPlayers': 'No players yet',
+  'leaderboard.games': 'games',
+  'leaderboard.wins': 'wins',
+  'leaderboard.score': 'score',
+
+  'leaderboard.byCountry': 'Country',
+  'leaderboard.byAge': 'Age',
+  'leaderboard.selectCountry': 'Select country...',
+  'leaderboard.under18': 'Under 18',
+  'leaderboard.age1825': '18-25',
+  'leaderboard.age2635': '26-35',
+  'leaderboard.age36plus': '36+',
+  'leaderboard.sameAge': 'Players aged {{age}}',
+
+  // Auth
+  'auth.login': 'Log In',
+  'auth.register': 'Register',
+  'auth.username': 'Username',
+  'auth.password': 'Password',
+  'auth.country': 'Country',
+  'auth.birthYear': 'Birth Year',
+  'auth.logout': 'Log Out',
+  'auth.editProfile': 'Edit Profile',
+  'auth.saveProfile': 'Save',
+  'auth.invalidCredentials': 'Invalid username or password',
+  'auth.usernameTaken': 'Username already taken',
+
+  // Profile (extended)
+  'profile.country': 'Country',
+  'profile.birthYear': 'Birth Year',
+
+  // Common
+  'common.close': 'Close',
 };

@@ -16,6 +16,7 @@ import { ClassicModeService } from './classic-mode.service';
 import { TeamModeService } from './team-mode.service';
 import { WordsService } from '../words/words.service';
 import { RoomPersistenceService } from './room-persistence.service';
+import { ProfileService } from './profile.service';
 import { generateHint, revealLetter } from './utils/hints';
 import { levenshteinDistance } from './utils/levenshtein';
 import { calculateGuessScore, calculateDrawerScore } from './utils/scoring';
@@ -45,6 +46,7 @@ export class GameService {
     private readonly teamMode: TeamModeService,
     private readonly wordsService: WordsService,
     private readonly persistence: RoomPersistenceService,
+    private readonly profileService: ProfileService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -691,6 +693,9 @@ export class GameService {
 
     this.persistence.persistRoom(room);
     this.persistence.markCompleted(room.id);
+
+    // Update player profiles (fire-and-forget).
+    this.profileService.updateProfilesAfterGame(room, finalScores, winner);
   }
 
   // ---------------------------------------------------------------------------
