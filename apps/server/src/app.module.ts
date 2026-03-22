@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 import { DatabaseModule } from './database/database.module';
 import { WordsModule } from './words/words.module';
@@ -11,6 +12,7 @@ import { AuthModule } from './auth/auth.module';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const imports: any[] = [
   ConfigModule.forRoot(),
+  ScheduleModule.forRoot(),
   DatabaseModule,
   WordsModule,
   GameModule,

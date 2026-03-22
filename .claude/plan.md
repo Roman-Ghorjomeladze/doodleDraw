@@ -1,173 +1,203 @@
-# Implementation Plan: Reactions, Profiles, Leaderboard & Confetti
+# Bot System Implementation Plan
 
-## Feature 1: Emoji Reactions (floating reactions visible to all)
-
-### Shared types
-- Add `reaction:send` to `ClientToServerEvents`: `{ emoji: string }`
-- Add `reaction:received` to `ServerToClientEvents`: `{ emoji: string, nickname: string, playerId: string }`
-- Define `REACTION_EMOJIS = ['😂', '🔥', '👏', '🤔', '😮', '❤️']` in shared constants
-
-### Server
-- Add `reaction:send` handler in `game.gateway.ts`
-  - Rate limit: 3 reactions per 5 seconds
-  - Validate emoji is in allowed list
-  - Broadcast `reaction:received` to entire room (players + spectators)
-  - No persistence needed (ephemeral)
-
-### Frontend
-- **ReactionBar component**: Row of emoji buttons below/beside the canvas
-  - Mobile: horizontal strip at bottom of canvas area, small buttons
-  - Desktop: same, positioned below canvas
-- **FloatingReaction component**: When `reaction:received` fires, render an animated emoji that floats upward from bottom of canvas and fades out (Framer Motion, ~2s animation)
-  - Show nickname label briefly next to emoji
-  - Stack multiple reactions without overlap (random x offset)
-- **Integration**: Add ReactionBar to ClassicMode and TeamMode layouts
-  - Available during `drawing` and `round_end` phases (everyone can react)
+## Overview
+Add bot players that can draw (Quick Draw dataset) and guess (Claude Haiku 4.5 vision), enabling permanent public lobbies, bot backfill on disconnect, and solo play.
 
 ---
 
-## Feature 2: Player Profiles (MongoDB-persisted stats)
+## Part 1: Shared Types & Bot Player Abstraction
 
-### MongoDB Schema - `PlayerProfile`
-New collection `playerProfiles`:
+**Modify:** `packages/shared/src/game-types.ts`
+- Add to `Player`: `isBot?: boolean`, `botDifficulty?: 'easy' | 'medium' | 'hard'`
+
+**Create:** `apps/server/src/game/bot/bot-player.ts`
+- Factory function `createBotPlayer(options)` returning a Player with:
+  - `id: 'bot-' + uuid`
+  - `persistentId: 'bot-' + uuid`
+  - Random name from `['DoodleBot', 'SketchMaster', 'PicassoBot', 'DrawBot3000', 'ArtWizard', 'InkMaster', 'ScribbleKing', 'BrushBot']`
+  - `isBot: true`, `isConnected: true`
+  - Bot-specific avatar (robot emoji or distinct seed)
+
+**Difficulty config:**
 ```
-{
-  persistentId: string (indexed, unique)
-  nickname: string (latest used)
-  avatar: string (latest used)
-  stats: {
-    totalGames: number
-    totalWins: number
-    totalScore: number
-    correctGuesses: number
-    totalDrawings: number
-    gamesAsDrawer: number  // rounds where they drew
-  }
-  favoriteWord: string | null  // most drawn/guessed word
-  wordFrequency: Record<string, number>  // track counts to compute favorite
-  createdAt: Date
-  updatedAt: Date
-}
+easy:   { guessDelayMs: 20000, strokeSpeedMultiplier: 2.0 }
+medium: { guessDelayMs: 10000, strokeSpeedMultiplier: 1.0 }
+hard:   { guessDelayMs: 5000,  strokeSpeedMultiplier: 0.5 }
 ```
 
-### Server - `ProfileService` (new)
-- `getOrCreateProfile(persistentId, nickname, avatar)` — upsert profile
-- `updateStatsAfterGame(persistentId, gameResult)` — called at game_end
-  - Increment totalGames, update wins/score/guesses
-  - Update wordFrequency and recompute favoriteWord
-- `getProfile(persistentId)` — fetch single profile
-- `getLeaderboard(type: 'allTime' | 'weekly', limit)` — aggregation query
+---
 
-### Server - Integration points
-- On `game:end` in `game.service.ts`: call `profileService.updateStatsAfterGame()` for each non-spectator player
-  - Winner gets totalWins++
-  - Each player: totalGames++, totalScore += their score, correctGuesses += their count
-  - Each drawer: totalDrawings += number of rounds they drew
-  - Word frequency updated from playerWordHistory
+## Part 2: Drawing Bot (Quick Draw Dataset)
 
-### Socket Events
-- `profile:get` (client→server): `{ persistentId: string }` → `profile:data` response
-- `profile:data` (server→client): `{ profile: PlayerProfile }`
-- `leaderboard:get` (client→server): `{ type: 'allTime' | 'weekly' }` → `leaderboard:data` response
-- `leaderboard:data` (server→client): `{ players: LeaderboardEntry[], type: string }`
+**Create:** `apps/server/src/game/bot/bot-drawing.service.ts`
 
-### Frontend - Profile display
-- **ProfileModal component**: Accessible by clicking on any player's avatar/name (in PlayerList, ScoreBoard, etc.)
-  - Shows: avatar, nickname, total games, wins, win rate, total score, correct guesses, favorite word
-  - Mobile: bottom sheet style modal
-  - Desktop: centered modal
-- **Own profile**: accessible from header (small avatar button)
-- Store profile data in a lightweight Zustand store or just fetch on demand
+**Flow when bot draws:**
+1. Wait 2-3 seconds (simulates thinking)
+2. Map game word → Quick Draw category via `word-mapping.ts`
+3. Fetch random drawing from `https://storage.googleapis.com/quickdraw_dataset/full/simplified/{word}.ndjson`
+   - NDJSON format: each line is `{ drawing: [[x[], y[]], ...] }` — array of strokes
+   - Pick a random line (stream the file, pick random offset)
+4. Scale coordinates: Quick Draw uses 256x256 → normalize to 0-1 range, then scale to canvas dimensions
+5. Replay strokes:
+   - For each stroke: build DrawAction with points, emit via `server.to(roomId).emit('draw:action', action)` and push to `room.drawingHistory`
+   - Add ±2px jitter to coordinates
+   - 300-800ms pause between strokes (adjusted by difficulty strokeSpeedMultiplier)
+6. Check `bot.drawingAborted` before each stroke for cancellation
+
+**Create:** `apps/server/src/game/bot/word-mapping.ts`
+- Map game words (all languages) → Quick Draw English categories
+- Start with common words, expand over time
+- Fallback: draw a simple "?" shape if no mapping found
 
 ---
 
-## Feature 3: Leaderboard
+## Part 3: Guessing Bot (Claude Vision API)
 
-### Server
-- `getLeaderboard()` in ProfileService:
-  - **All-time**: Sort by totalScore desc, limit 50
-  - **Weekly**: Filter by games played in last 7 days (track `lastGameAt` timestamp), sort by score in that period
-  - For weekly: add `weeklyScore` and `weeklyGames` fields, reset logic via `lastWeekReset` date check
-  - Return: `{ rank, persistentId, nickname, avatar, totalScore, totalWins, totalGames }`
+**Create:** `apps/server/src/game/bot/bot-vision.service.ts`
 
-### Frontend
-- **LeaderboardPage component**: New tab on HomePage (alongside Create, Join, Available, Ongoing)
-  - Tab with trophy icon
-  - Toggle: "All Time" / "This Week"
-  - Scrollable list with rank numbers, avatars, nicknames, scores
-  - Top 3 highlighted (gold/silver/bronze styling)
-  - Tap on player → opens ProfileModal
-  - Mobile: full-width list, compact rows
-  - Desktop: centered card with wider rows
+**Canvas snapshot approach (from spec):**
+- Frontend emits `canvas_snapshot` (base64 PNG at 400x300) every 5 seconds during drawing phase when bots are in game
+- Server stores `room.currentCanvasSnapshot`
 
----
+**Guessing flow:**
+1. 6-second initial delay before first guess attempt
+2. Every 5 seconds: check if snapshot exists
+3. Call Claude Haiku 4.5 vision:
+   - Send canvas base64 + word list
+   - Prompt: "This is a Pictionary-style drawing. The possible words are: {list}. Reply with ONLY one word from the list, or 'unsure'."
+4. If confident → submit guess through existing `handleGuess()` flow
+5. Stop when `bot.stopGuessing = true` or correct guess made
 
-## Feature 4: Confetti & Animations
-
-### Library
-- Use `canvas-confetti` (lightweight, ~6KB) — add to web dependencies
-
-### Trigger points
-1. **Correct guess**: When current player guesses correctly (`chat:correctGuess` where playerId matches own)
-   - Small burst of confetti from bottom center
-   - Quick, ~1 second
-2. **Game win**: When `game:end` fires and current player is the winner
-   - Full-screen confetti cannon (both sides, multiple bursts over 3 seconds)
-   - Gold-colored confetti
-3. **Round end (drawer)**: If drawer had high success rate (>50% guessed), small celebratory confetti
-
-### Frontend Integration
-- **useConfetti hook**: Wraps canvas-confetti, exposes `fireCorrectGuess()`, `fireGameWin()`, `fireDrawerSuccess()`
-- Hook listens to socket events and auto-fires when conditions met
-- Called in `useGameEvents.ts` where the relevant events are already handled
-- No confetti on mobile battery-save concern? — keep it, canvas-confetti is lightweight and short-lived
+**Add socket event:**
+- `canvas_snapshot` to `ClientToServerEvents`: `{ data: string }` (base64 PNG)
+- Server handler stores on room: `room.currentCanvasSnapshot = data`
 
 ---
 
-## Mobile Responsiveness Notes (applies to all features)
+## Part 4: Bot Scheduler Service
 
-- **ReactionBar**: Use `flex-wrap` with small 32px tap targets, positioned as overlay on canvas bottom
-- **ProfileModal**: Use `max-h-[80vh] overflow-y-auto`, bottom-sheet style on mobile (slide up from bottom)
-- **Leaderboard**: Single column, compact rows with 48px height, horizontal scroll prevented
-- **Confetti**: Works natively on mobile canvas, no changes needed
-- All new modals use the existing ConfirmModal pattern with Framer Motion AnimatePresence
-- Touch-friendly: min tap target 44px, adequate spacing
+**Create:** `apps/server/src/game/bot/bot-scheduler.service.ts`
+
+- Uses `@nestjs/schedule` `@Interval(5000)`
+- Loops through active games with bots
+- For each bot guesser: check snapshot, call vision API, submit guess
+- Manages drawing bot tasks: when bot becomes drawer, starts stroke replay
+
+**Install:** `@nestjs/schedule` in server
+
+---
+
+## Part 5: Permanent Public Lobbies
+
+**Create:** `apps/server/src/game/bot/permanent-lobbies.service.ts`
+
+**3 lobbies (created on bootstrap):**
+| ID | Max Players | Mode | Name |
+|---|---|---|---|
+| `lobby-2p` | 2 | classic | 2 Player |
+| `lobby-3p` | 3 | classic | 3 Player |
+| `lobby-4p` | 4 | team | Teams (2v2) |
+
+**Lifecycle:**
+1. On `OnApplicationBootstrap`: create rooms, fill with bots, auto-start game
+2. On game end: auto-rematch (no vote needed), reset scores, restart
+3. Never close/delete these rooms
+4. Real player joins → evict one bot
+5. Real player leaves → bot backfills with same score
+
+**Lobby state broadcast:**
+- Every 3 seconds via `@Interval(3000)`, emit to `lobby_browser` socket room
+- Payload: `{ id, name, maxPlayers, realPlayers, totalPlayers, status }`
+
+---
+
+## Part 6: Bot Backfill for Regular Games
+
+**Modify:** `apps/server/src/game/game.gateway.ts` — `handleDisconnect()`
+
+**New behavior (after existing grace period):**
+- If player hasn't reconnected after grace period:
+  - Create bot with player's score
+  - Swap into their slot in the game
+  - If was drawing → skip to next round with system message
+- When real player reconnects to a room with a bot placeholder → swap bot out
+
+---
+
+## Part 7: Round Lifecycle Hooks
+
+**Modify:** `apps/server/src/game/game.service.ts`
+
+**On round start:**
+- `room.currentCanvasSnapshot = null`
+- All bots: `stopGuessing = false`, `drawingAborted = false`
+
+**On round end:**
+- All bots: `stopGuessing = true`, `drawingAborted = true`
+
+---
+
+## Part 8: Frontend Changes
+
+### Canvas Snapshot Emission
+**Modify:** `apps/web/src/components/Canvas/DrawingCanvas.tsx`
+- If any player in room has `isBot: true` AND phase is `drawing` AND user is NOT drawer:
+  - Every 5 seconds, export canvas as base64 PNG (scale to 400x300)
+  - Emit `canvas_snapshot` socket event
+
+### Lobby Browser
+**Modify:** `apps/web/src/components/Lobby/HomePage.tsx`
+- Add "Public Lobbies" section (or new tab)
+- Show 3 permanent lobbies with live player counts
+- Join button for each
+
+### Bot Indicators
+**Modify:** `apps/web/src/components/Lobby/PlayerList.tsx`
+- Show robot icon next to bot names
+- Style bot entries slightly differently
 
 ---
 
 ## Implementation Order
 
-1. **Confetti** (smallest scope, immediate impact, no server changes)
-2. **Reactions** (small server change, fun social feature)
-3. **Player Profiles + MongoDB schema** (foundation for leaderboard)
-4. **Leaderboard** (depends on profiles being populated)
+1. Install `@nestjs/schedule`, add `ScheduleModule` to AppModule
+2. Shared types — add `isBot` to Player
+3. Bot player factory
+4. Word mapping file
+5. Drawing bot service (Quick Draw fetch + replay)
+6. Vision service (Claude API)
+7. Bot scheduler service
+8. Game service hooks (round start/end bot resets)
+9. Gateway: canvas_snapshot handler, disconnect backfill
+10. Permanent lobbies service + bootstrap
+11. Frontend: canvas snapshot, lobby browser, bot indicators
 
 ---
 
-## Files to modify/create
+## Files Summary
 
-### Shared package
-- `packages/shared/src/socket-events.ts` — add reaction, profile, leaderboard events
-- `packages/shared/src/game-types.ts` — add PlayerProfile, LeaderboardEntry types
-- `packages/shared/src/constants.ts` — add REACTION_EMOJIS
+| File | Action |
+|---|---|
+| `packages/shared/src/game-types.ts` | Modify — add isBot to Player |
+| `packages/shared/src/socket-events.ts` | Modify — add canvas_snapshot event |
+| `apps/server/src/game/bot/bot-player.ts` | Create |
+| `apps/server/src/game/bot/bot-drawing.service.ts` | Create |
+| `apps/server/src/game/bot/bot-vision.service.ts` | Create |
+| `apps/server/src/game/bot/bot-scheduler.service.ts` | Create |
+| `apps/server/src/game/bot/word-mapping.ts` | Create |
+| `apps/server/src/game/bot/permanent-lobbies.service.ts` | Create |
+| `apps/server/src/game/game.service.ts` | Modify — round hooks |
+| `apps/server/src/game/game.gateway.ts` | Modify — snapshot handler, backfill |
+| `apps/server/src/game/game.module.ts` | Modify — register new services |
+| `apps/server/src/app.module.ts` | Modify — add ScheduleModule |
+| `apps/web/src/components/Canvas/DrawingCanvas.tsx` | Modify — snapshot emission |
+| `apps/web/src/components/Lobby/HomePage.tsx` | Modify — lobby browser |
+| `apps/web/src/components/Lobby/PlayerList.tsx` | Modify — bot indicators |
 
-### Server
-- **New**: `apps/server/src/game/profile.service.ts`
-- **New**: `apps/server/src/database/schemas/profile.schema.ts`
-- **Modify**: `apps/server/src/game/game.gateway.ts` — add reaction, profile, leaderboard handlers
-- **Modify**: `apps/server/src/game/game.service.ts` — call profile update on game end
-- **Modify**: `apps/server/src/game/game.module.ts` — register ProfileService
-
-### Frontend
-- **New**: `apps/web/src/components/Game/ReactionBar.tsx`
-- **New**: `apps/web/src/components/Game/FloatingReactions.tsx`
-- **New**: `apps/web/src/components/Profile/ProfileModal.tsx`
-- **New**: `apps/web/src/components/Lobby/Leaderboard.tsx`
-- **New**: `apps/web/src/hooks/useConfetti.ts`
-- **Modify**: `apps/web/src/components/Game/ClassicMode.tsx` — add ReactionBar + FloatingReactions
-- **Modify**: `apps/web/src/components/Game/TeamMode.tsx` — same
-- **Modify**: `apps/web/src/components/Lobby/HomePage.tsx` — add Leaderboard tab
-- **Modify**: `apps/web/src/hooks/useGameEvents.ts` — add reaction listener, confetti triggers
-- **Modify**: `apps/web/src/components/Game/ScoreBoard.tsx` — clickable names → ProfileModal
-- **Modify**: `apps/web/src/components/Lobby/PlayerList.tsx` — clickable names → ProfileModal
-- Install: `canvas-confetti` + `@types/canvas-confetti`
+## Environment Variables
+```
+ANTHROPIC_API_KEY=<already available>
+BOT_DIFFICULTY=medium
+BOT_GUESS_INTERVAL_MS=5000
+QUICKDRAW_FALLBACK=true
+```

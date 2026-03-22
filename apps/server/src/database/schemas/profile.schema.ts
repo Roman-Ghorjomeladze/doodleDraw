@@ -26,6 +26,10 @@ export class ProfileDoc {
   @Prop({ default: 0 })
   totalScore!: number;
 
+  /** Elo rating — starts at 1200. */
+  @Prop({ default: 1200 })
+  eloRating!: number;
+
   @Prop({ default: 0 })
   correctGuesses!: number;
 
@@ -74,7 +78,8 @@ export const ProfileDocSchema = SchemaFactory.createForClass(ProfileDoc);
 
 // For leaderboard queries.
 ProfileDocSchema.index({ totalScore: -1 });
+ProfileDocSchema.index({ eloRating: -1 });
 ProfileDocSchema.index({ weeklyScore: -1 });
 ProfileDocSchema.index({ username: 1 }, { unique: true, sparse: true });
-ProfileDocSchema.index({ country: 1, totalScore: -1 });
-ProfileDocSchema.index({ birthYear: 1, totalScore: -1 });
+ProfileDocSchema.index({ country: 1, eloRating: -1 });
+ProfileDocSchema.index({ birthYear: 1, eloRating: -1 });

@@ -104,6 +104,7 @@ export class RoomService implements OnModuleInit {
       createdAt: Date.now(),
       currentRound: 0,
       currentWord: null,
+      currentWordQuickDraw: null,
       wordHint: '',
       drawerId: null,
       teamADrawerId: null,
@@ -249,8 +250,8 @@ export class RoomService implements OnModuleInit {
       this.persistentPlayerRoomMap.delete(player.persistentId);
     }
 
-    // If room is now empty, delete it immediately.
-    if (room.players.size === 0) {
+    // If room is now empty, delete it — unless it's a permanent lobby.
+    if (room.players.size === 0 && !room.isPermanentLobby) {
       this.cancelCleanup(roomId);
       this.rooms.delete(roomId);
       this.persistence.deleteRoom(roomId);
@@ -600,7 +601,7 @@ export class RoomService implements OnModuleInit {
       if (!room) return;
 
       const anyConnected = Array.from(room.players.values()).some((p) => p.isConnected);
-      if (!anyConnected) {
+      if (!anyConnected && !room.isPermanentLobby) {
         this.rooms.delete(roomId);
         this.persistence.deleteRoom(roomId);
         // Clean up player-room mappings for remaining entries.

@@ -13,9 +13,16 @@ export class Word {
 
   @Prop({ required: true })
   difficulty!: number;
+
+  @Prop({ default: false })
+  botCompatible!: boolean;
+
+  @Prop({ default: null })
+  quickDrawCategory?: string;
 }
 
 export const WordSchema = SchemaFactory.createForClass(Word);
 
 // Index for the primary query: getRandomWords(languageCode, difficulty)
 WordSchema.index({ languageId: 1, difficulty: 1 });
+WordSchema.index({ languageId: 1, difficulty: 1, botCompatible: 1 });

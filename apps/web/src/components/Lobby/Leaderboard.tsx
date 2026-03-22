@@ -180,8 +180,11 @@ export default function Leaderboard() {
                   </div>
                 </div>
 
-                <div className="font-bold text-primary-600 dark:text-primary-400 shrink-0">
-                  {player.totalScore}
+                <div className="text-right shrink-0">
+                  <div className="font-bold text-primary-600 dark:text-primary-400">
+                    {player.eloRating ?? 1200}
+                  </div>
+                  <div className="text-[10px] text-surface-400">ELO</div>
                 </div>
               </motion.div>
             );

@@ -12,8 +12,12 @@ export const en = {
 	'home.joinShort': 'Join',
 	'home.availableShort': 'Rooms',
 	'home.ongoingShort': 'Ongoing',
+	'home.publicLobbies': 'Play with Bot',
+	'home.lobbiesShort': 'Bots',
 	'home.layoutTabs': 'Tabs layout',
 	'home.layoutSidebar': 'Sidebar layout',
+	'home.activeGame': 'You have an active game!',
+	'home.rejoinGame': 'Rejoin',
 
 	// Create Room
 	'create.gameMode': 'Game Mode',
@@ -49,6 +53,7 @@ export const en = {
 	'lobby.leave': 'Leave',
 	'lobby.startGame': 'Start Game',
 	'lobby.needMorePlayers': 'Need {{count}} more player(s)',
+	'lobby.addBot': 'Add Bot',
 	'lobby.teamAName': 'Team A Name',
 	'lobby.teamBName': 'Team B Name',
 	'lobby.hints': 'Hints',
@@ -230,6 +235,15 @@ export const en = {
 	'leaderboard.age2635': '26-35',
 	'leaderboard.age36plus': '36+',
 	'leaderboard.sameAge': 'Players aged {{age}}',
+
+	// Public Lobbies / Play with Bot
+	'lobbies.description': 'Jump into an always-on game with bots. Real players can join anytime!',
+	'lobbies.inProgress': 'In Progress',
+	'lobbies.waiting': 'Waiting',
+	'lobbies.players': 'players',
+	'lobbies.bots': 'bot',
+	'lobbies.join': 'Join',
+	'lobbies.loading': 'Loading lobbies...',
 
 	// Auth
 	'auth.login': 'Log In',

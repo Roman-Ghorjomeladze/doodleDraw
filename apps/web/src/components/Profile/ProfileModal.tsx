@@ -58,9 +58,21 @@ export default function ProfileModal({ persistentId, onClose }: ProfileModalProp
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          drag="y"
+          dragConstraints={{ top: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 100 || info.velocity.y > 500) {
+              onClose();
+            }
+          }}
           onClick={(e) => e.stopPropagation()}
           className="bg-white dark:bg-surface-800 rounded-t-2xl sm:rounded-card shadow-game-lg p-6 w-full sm:max-w-sm max-h-[80vh] overflow-y-auto"
         >
+          {/* Drag handle */}
+          <div className="flex justify-center mb-3 sm:hidden">
+            <div className="w-10 h-1 rounded-full bg-surface-300 dark:bg-surface-600" />
+          </div>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <motion.div
@@ -111,8 +123,8 @@ export default function ProfileModal({ persistentId, onClose }: ProfileModalProp
                   icon="📊"
                 />
                 <StatCard
-                  label={t('profile.totalScore')}
-                  value={profile.totalScore}
+                  label="ELO"
+                  value={profile.eloRating ?? 1200}
                   icon="⭐"
                 />
                 <StatCard

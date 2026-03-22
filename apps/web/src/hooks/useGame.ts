@@ -97,6 +97,10 @@ export function useGame() {
     [emit],
   );
 
+  const addBot = useCallback(() => {
+    emit('room:addBot');
+  }, [emit]);
+
   return {
     connected,
     roomId: gameStore.roomId,
@@ -115,5 +119,6 @@ export function useGame() {
     spectateRoom,
     rematchVote,
     kickPlayer,
+    addBot,
   };
 }

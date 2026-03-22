@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useDrawingStore } from '@/stores/drawingStore';
+import { useGameStore } from '@/stores/gameStore';
 import { useSocket } from '@/hooks/useSocket';
 import { cn } from '@/utils/cn';
 import type { DrawAction, ServerToClientEvents } from '@doodledraw/shared';
@@ -356,6 +357,37 @@ export default function DrawingCanvas({
       window.removeEventListener('doodledraw:localClear', handleLocalClear);
     };
   }, [isDrawer, undoCanvas, getCtx]);
+
+  // Emit canvas snapshots for bot guessing (every 5 seconds during drawing phase).
+  // Only the drawer sends snapshots — they have the authoritative canvas state.
+  useEffect(() => {
+    if (!isDrawer) return;
+
+    const { players, phase } = useGameStore.getState();
+    const hasBots = players.some((p) => p.isBot);
+    if (!hasBots || phase !== 'drawing') return;
+
+    const interval = setInterval(() => {
+      const currentPhase = useGameStore.getState().phase;
+      if (currentPhase !== 'drawing') return;
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      // Create a smaller canvas for the snapshot (400x300).
+      const snapshotCanvas = document.createElement('canvas');
+      snapshotCanvas.width = 400;
+      snapshotCanvas.height = 300;
+      const sCtx = snapshotCanvas.getContext('2d');
+      if (!sCtx) return;
+      sCtx.drawImage(canvas, 0, 0, 400, 300);
+
+      const base64 = snapshotCanvas.toDataURL('image/png');
+      socket.current?.emit('canvas:snapshot', { image: base64 });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isDrawer, socket]);
 
   return (
     <div className="relative rounded-game overflow-hidden shadow-game-lg bg-white dark:bg-white">

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Server } from 'socket.io';
 import {
   Room,
@@ -20,6 +20,10 @@ import { ProfileService } from './profile.service';
 import { generateHint, revealLetter } from './utils/hints';
 import { levenshteinDistance } from './utils/levenshtein';
 import { calculateGuessScore, calculateDrawerScore } from './utils/scoring';
+import { botStates, isBotId } from './bot/bot-player';
+import { BotDrawingService } from './bot/bot-drawing.service';
+import { BotSchedulerService } from './bot/bot-scheduler.service';
+import { PermanentLobbiesService } from './bot/permanent-lobbies.service';
 
 /** Duration of the round_end phase before the next round starts. */
 const ROUND_END_DELAY_MS = 5_000;
@@ -47,6 +51,10 @@ export class GameService {
     private readonly wordsService: WordsService,
     private readonly persistence: RoomPersistenceService,
     private readonly profileService: ProfileService,
+    @Inject(forwardRef(() => BotDrawingService))
+    private readonly botDrawing: BotDrawingService,
+    @Inject(forwardRef(() => PermanentLobbiesService))
+    private readonly permanentLobbies: PermanentLobbiesService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -177,9 +185,11 @@ export class GameService {
     // Use the stored pending words from the word selection phase.
     if (wordIndex < 0 || wordIndex >= room.pendingWords.length) return;
 
-    const selectedWord = room.pendingWords[wordIndex].word;
+    const selectedEntry = room.pendingWords[wordIndex];
+    const selectedWord = selectedEntry.word;
     room.pendingWords = [];
     room.currentWord = selectedWord;
+    room.currentWordQuickDraw = selectedEntry.quickDrawCategory ?? null;
 
     // Track word history for redraw round.
     if (!room.isRedrawRound) {
@@ -251,6 +261,12 @@ export class GameService {
 
     // Start the round timer.
     this.startRoundTimer(roomId, server);
+
+    // Reset bot states for the new round.
+    this.resetBotStatesForRound(room);
+
+    // If the drawer is a bot, trigger drawing.
+    this.triggerBotDrawing(room, server);
 
     this.persistence.persistRoom(room);
   }
@@ -354,6 +370,9 @@ export class GameService {
     // Stop timers.
     this.clearRoundTimer(roomId);
     this.clearHintTimer(roomId);
+
+    // Stop all bot activity for this round.
+    this.stopBotsForRound(room);
 
     room.phase = 'round_end';
 
@@ -522,6 +541,7 @@ export class GameService {
   private async presentWordOptions(room: Room, server: Server): Promise<void> {
     // Clear round-level state before the async DB call.
     room.currentWord = null;
+    room.currentWordQuickDraw = null;
     room.wordHint = '';
     room.correctGuessers = [];
     room.drawingHistory = [];
@@ -536,15 +556,19 @@ export class GameService {
     // room.phase are always consistent.  If a reconnection happens during
     // this await, the phase is still the previous one (e.g. round_end)
     // and the client correctly restores that state.
+    // In rooms with bots, only use bot-compatible words (ones with Quick Draw drawings)
+    const hasBots = [...room.players.values()].some(p => p.isBot);
     const words = await this.wordsService.getRandomWords(
       room.settings.language,
       room.settings.difficulty,
       WORD_OPTIONS_COUNT,
+      hasBots,
     );
 
     const wordOptions = words.map((w) => ({
       word: w.word,
       difficulty: w.difficulty,
+      quickDrawCategory: w.quickDrawCategory,
     }));
 
     // Store word options and set phase atomically (no await between them).
@@ -572,6 +596,16 @@ export class GameService {
       },
     });
     server.to(room.id).emit('room:updated', { room: this.roomService.serializeRoom(room) });
+
+    // If the drawer is a bot, auto-select a word after a short delay.
+    const botDrawerId = room.mode === 'classic' ? room.drawerId : room.teamADrawerId;
+    if (botDrawerId && isBotId(botDrawerId)) {
+      setTimeout(() => {
+        if (room.phase === 'selecting_word') {
+          this.selectWord(room.id, botDrawerId, 0, server);
+        }
+      }, 1500);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -580,6 +614,7 @@ export class GameService {
 
   private async presentRedrawTurn(room: Room, server: Server): Promise<void> {
     room.currentWord = null;
+    room.currentWordQuickDraw = null;
     room.wordHint = '';
     room.correctGuessers = [];
     room.drawingHistory = [];
@@ -649,6 +684,10 @@ export class GameService {
     server.to(room.id).emit('game:phaseChange', { phase: 'drawing' });
     server.to(room.id).emit('room:updated', { room: this.roomService.serializeRoom(room) });
     this.startRoundTimer(room.id, server);
+
+    // Reset bot states and trigger bot drawing.
+    this.resetBotStatesForRound(room);
+    this.triggerBotDrawing(room, server);
   }
 
   // ---------------------------------------------------------------------------
@@ -694,8 +733,13 @@ export class GameService {
     this.persistence.persistRoom(room);
     this.persistence.markCompleted(room.id);
 
-    // Update player profiles (fire-and-forget).
+    // Update player profiles (fire-and-forget, skip bots).
     this.profileService.updateProfilesAfterGame(room, finalScores, winner);
+
+    // If this is a permanent lobby, auto-restart.
+    if (room.isPermanentLobby) {
+      this.permanentLobbies.handleGameEnd(room.id);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -884,6 +928,7 @@ export class GameService {
     room.phase = 'lobby';
     room.currentRound = 0;
     room.currentWord = null;
+    room.currentWordQuickDraw = null;
     room.wordHint = '';
     room.drawerId = null;
     room.teamADrawerId = null;
@@ -999,6 +1044,7 @@ export class GameService {
     room.phase = 'lobby';
     room.currentRound = 0;
     room.currentWord = null;
+    room.currentWordQuickDraw = null;
     room.wordHint = '';
     room.drawerId = null;
     room.teamADrawerId = null;
@@ -1069,5 +1115,64 @@ export class GameService {
     this.clearRoundTimer(roomId);
     this.clearHintTimer(roomId);
     this.clearStartCountdown(roomId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bot helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reset bot states at the start of a new round.
+   */
+  private resetBotStatesForRound(room: Room): void {
+    room.currentCanvasSnapshot = undefined;
+
+    for (const [, player] of room.players) {
+      if (!player.isBot) continue;
+      const state = botStates.get(player.id);
+      if (state) {
+        state.stopGuessing = false;
+        state.drawingAborted = false;
+        state.firstGuessAt = 0;
+        state.previousGuesses = [];
+      }
+    }
+  }
+
+  /**
+   * Stop all bot activity at the end of a round.
+   */
+  private stopBotsForRound(room: Room): void {
+    for (const [, player] of room.players) {
+      if (!player.isBot) continue;
+      const state = botStates.get(player.id);
+      if (state) {
+        state.stopGuessing = true;
+        state.drawingAborted = true;
+      }
+      // Cancel any active drawing.
+      this.botDrawing.cancelDrawing(player.id);
+    }
+  }
+
+  /**
+   * If the current drawer is a bot, start the drawing process.
+   */
+  private triggerBotDrawing(room: Room, server: Server): void {
+    if (!room.currentWord) return;
+
+    const drawerIds: string[] = [];
+    if (room.mode === 'classic' && room.drawerId) {
+      drawerIds.push(room.drawerId);
+    } else if (room.mode === 'team') {
+      if (room.teamADrawerId) drawerIds.push(room.teamADrawerId);
+      if (room.teamBDrawerId) drawerIds.push(room.teamBDrawerId);
+    }
+
+    for (const drawerId of drawerIds) {
+      if (isBotId(drawerId)) {
+        this.botDrawing.startDrawing(drawerId, room, room.currentWord, server, room.currentWordQuickDraw ?? undefined);
+      }
+    }
   }
 }

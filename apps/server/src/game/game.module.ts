@@ -9,6 +9,10 @@ import { DrawingService } from './drawing.service';
 import { GameGateway } from './game.gateway';
 import { RoomPersistenceService } from './room-persistence.service';
 import { ProfileService } from './profile.service';
+import { BotDrawingService } from './bot/bot-drawing.service';
+import { BotVisionService } from './bot/bot-vision.service';
+import { BotSchedulerService } from './bot/bot-scheduler.service';
+import { PermanentLobbiesService } from './bot/permanent-lobbies.service';
 
 @Module({
   imports: [WordsModule, AuthModule],
@@ -16,12 +20,16 @@ import { ProfileService } from './profile.service';
     RoomPersistenceService,
     ProfileService,
     RoomService,
-    GameService,
     ClassicModeService,
     TeamModeService,
     DrawingService,
+    BotDrawingService,
+    BotVisionService,
+    BotSchedulerService,
+    PermanentLobbiesService,
+    GameService,
     GameGateway,
   ],
-  exports: [RoomService, GameService, GameGateway, ProfileService],
+  exports: [RoomService, GameService, GameGateway, ProfileService, PermanentLobbiesService],
 })
 export class GameModule {}

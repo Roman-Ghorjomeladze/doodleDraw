@@ -9,6 +9,8 @@ export type GamePhase =
 
 export type Team = 'A' | 'B';
 
+export type BotDifficulty = 'easy' | 'medium' | 'hard';
+
 export interface Player {
   id: string;
   persistentId: string;
@@ -21,6 +23,8 @@ export interface Player {
   isHost: boolean;
   isConnected: boolean;
   isSpectator?: boolean;
+  isBot?: boolean;
+  botDifficulty?: BotDifficulty;
 }
 
 export interface RoomSettings {
@@ -45,6 +49,7 @@ export interface Room {
   createdAt: number;
   currentRound: number;
   currentWord: string | null;
+  currentWordQuickDraw: string | null;
   wordHint: string;
   drawerId: string | null;
   teamADrawerId: string | null;
@@ -52,7 +57,7 @@ export interface Room {
   roundStartTime: number | null;
   correctGuessers: string[];
   drawingHistory: DrawAction[];
-  pendingWords: { word: string; difficulty: number }[];
+  pendingWords: { word: string; difficulty: number; quickDrawCategory?: string }[];
   drawOrder: string[];
   drawOrderIndex: number;
   teamAScore: number;
@@ -62,6 +67,8 @@ export interface Room {
   playerWordHistory: Map<string, string[]>;
   chatHistory: ChatMessage[];
   rematchVotes: Map<string, RematchStatus>;
+  currentCanvasSnapshot?: string;
+  isPermanentLobby?: boolean;
 }
 
 export type RematchStatus = 'pending' | 'accepted' | 'declined';
@@ -161,6 +168,7 @@ export interface PlayerProfile {
   totalGames: number;
   totalWins: number;
   totalScore: number;
+  eloRating: number;
   correctGuesses: number;
   totalDrawings: number;
   favoriteWord: string | null;
@@ -174,6 +182,7 @@ export interface LeaderboardEntry {
   nickname: string;
   avatar: string;
   totalScore: number;
+  eloRating: number;
   totalWins: number;
   totalGames: number;
   country?: string;
@@ -207,4 +216,14 @@ export interface AuthUser {
   country: string;
   birthYear: number;
   persistentId: string;
+}
+
+export interface LobbyInfo {
+  id: string;
+  name: string;
+  maxPlayers: number;
+  realPlayers: number;
+  totalPlayers: number;
+  status: 'waiting' | 'in_progress';
+  mode: GameMode;
 }

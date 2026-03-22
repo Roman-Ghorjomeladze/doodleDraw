@@ -13,7 +13,7 @@ import { DEFAULT_ROOM_SETTINGS, MIN_PLAYERS_CLASSIC, MIN_PLAYERS_TEAM } from '@d
 export default function RoomLobby() {
   const { roomId, mode, players, isHost, settings, countdownSeconds } = useGameStore();
   const { playerId } = usePlayerStore();
-  const { startGame, cancelStartGame, leaveRoom, updateSettings, switchTeam, kickPlayer } = useGame();
+  const { startGame, cancelStartGame, leaveRoom, updateSettings, switchTeam, kickPlayer, addBot } = useGame();
   const { t } = useTranslation();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showExpandedChat, setShowExpandedChat] = useState(false);
@@ -245,15 +245,27 @@ export default function RoomLobby() {
             {t('lobby.leave')}
           </motion.button>
           {isHost && (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={startGame}
-              disabled={!canStart}
-              className="flex-1 py-3 bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-600 text-white font-bold rounded-button shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {canStart ? t('lobby.startGame') : t('lobby.needMorePlayers', { count: minPlayers - players.length })}
-            </motion.button>
+            <>
+              {players.length < (settings?.maxPlayers || 16) && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={addBot}
+                  className="px-4 py-3 rounded-button bg-accent-500 hover:bg-accent-600 text-white font-semibold transition-all flex items-center gap-1.5"
+                >
+                  🤖 {t('lobby.addBot')}
+                </motion.button>
+              )}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={startGame}
+                disabled={!canStart}
+                className="flex-1 py-3 bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-600 text-white font-bold rounded-button shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {canStart ? t('lobby.startGame') : t('lobby.needMorePlayers', { count: minPlayers - players.length })}
+              </motion.button>
+            </>
           )}
         </div>
       </motion.div>

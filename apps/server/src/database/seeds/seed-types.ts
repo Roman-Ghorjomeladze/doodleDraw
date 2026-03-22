@@ -1,3 +1,8 @@
+export interface WordEntry {
+  word: string;
+  botCompatible?: boolean;
+}
+
 export interface WordSeedData {
   language: {
     code: string;
@@ -5,8 +10,8 @@ export interface WordSeedData {
     nativeName: string;
   };
   words: {
-    easy: string[];
-    medium: string[];
-    hard: string[];
+    easy: (string | WordEntry)[];
+    medium: (string | WordEntry)[];
+    hard: (string | WordEntry)[];
   };
 }

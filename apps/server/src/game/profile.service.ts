@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ProfileDoc, ProfileDocument } from '../database/schemas/profile.schema';
 import type { Room, GameScore, Team, PlayerProfile, LeaderboardEntry } from '@doodledraw/shared';
+import { calculateGameElo, DEFAULT_RATING } from './utils/elo';
 
 @Injectable()
 export class ProfileService {
@@ -25,6 +26,11 @@ export class ProfileService {
     try {
       const currentWeekStart = this.getWeekStart();
 
+      // Collect ALL non-spectator players for Elo calculation (including bots).
+      // Bots get a fixed Elo so human players can gain/lose rating against them.
+      const BOT_ELO = 1200;
+      const eloPlayers: { persistentId: string; eloRating: number; isWinner: boolean; isBot?: boolean; socketId: string }[] = [];
+
       for (const [_socketId, player] of room.players) {
         if (player.isSpectator) continue;
 
@@ -36,8 +42,43 @@ export class ProfileService {
             ? winner === _socketId
             : winner === player.team;
 
-        // Get words this player interacted with.
+        let currentElo: number;
+        if (player.isBot) {
+          currentElo = BOT_ELO;
+        } else {
+          const existingProfile = await this.profileModel.findOne({ persistentId: player.persistentId }).exec();
+          currentElo = existingProfile?.eloRating ?? DEFAULT_RATING;
+        }
+
+        eloPlayers.push({
+          persistentId: player.persistentId,
+          eloRating: currentElo,
+          isWinner,
+          isBot: player.isBot ?? false,
+          socketId: _socketId,
+        });
+      }
+
+      // Calculate Elo changes for all players.
+      const eloResults = calculateGameElo(eloPlayers);
+      this.logger.log(`Elo results: ${JSON.stringify(Object.fromEntries(eloResults))}`);
+
+      // Update all players (including bots for stats, but bots don't get Elo).
+      for (const [_socketId, player] of room.players) {
+        if (player.isSpectator) continue;
+
+        const scoreEntry = finalScores.find((s) => s.playerId === _socketId);
+        if (!scoreEntry) continue;
+
+        const isWinner =
+          room.mode === 'classic'
+            ? winner === _socketId
+            : winner === player.team;
+
         const wordsDrawn = room.playerWordHistory.get(_socketId) ?? [];
+
+        // Elo change only for human players.
+        const newElo = player.isBot ? undefined : eloResults.get(player.persistentId);
 
         await this.updateProfile(
           player.persistentId,
@@ -45,10 +86,11 @@ export class ProfileService {
           player.avatar,
           scoreEntry.score,
           scoreEntry.correctGuesses,
-          wordsDrawn.length, // number of rounds drawn
+          wordsDrawn.length,
           isWinner,
           wordsDrawn,
           currentWeekStart,
+          newElo,
         );
       }
 
@@ -68,6 +110,7 @@ export class ProfileService {
     isWinner: boolean,
     wordsDrawn: string[],
     currentWeekStart: string,
+    newElo?: number,
   ): Promise<void> {
     // Find existing profile.
     let profile = await this.profileModel.findOne({ persistentId }).exec();
@@ -80,6 +123,7 @@ export class ProfileService {
         totalGames: 0,
         totalWins: 0,
         totalScore: 0,
+        eloRating: DEFAULT_RATING,
         correctGuesses: 0,
         totalDrawings: 0,
         weeklyScore: 0,
@@ -108,6 +152,11 @@ export class ProfileService {
 
     if (isWinner) {
       profile.totalWins += 1;
+    }
+
+    // Update Elo rating if provided (human players only).
+    if (newElo !== undefined) {
+      profile.eloRating = newElo;
     }
 
     // Update word frequency.
@@ -143,6 +192,7 @@ export class ProfileService {
       totalGames: doc.totalGames,
       totalWins: doc.totalWins,
       totalScore: doc.totalScore,
+      eloRating: doc.eloRating ?? DEFAULT_RATING,
       correctGuesses: doc.correctGuesses,
       totalDrawings: doc.totalDrawings,
       favoriteWord: doc.favoriteWord,
@@ -167,16 +217,15 @@ export class ProfileService {
     } else if (type === 'country') {
       if (!options?.country) return [];
       query = { totalGames: { $gt: 0 }, country: options.country };
-      sortField = 'totalScore';
+      sortField = 'eloRating';
     } else if (type === 'age') {
-      // Exact age: ageGroup is the birth year as a string.
       const birthYear = parseInt(options?.ageGroup || '', 10);
       if (!birthYear || isNaN(birthYear)) return [];
       query = { totalGames: { $gt: 0 }, birthYear };
-      sortField = 'totalScore';
+      sortField = 'eloRating';
     } else {
       query = { totalGames: { $gt: 0 } };
-      sortField = 'totalScore';
+      sortField = 'eloRating';
     }
 
     const docs = await this.profileModel
@@ -191,6 +240,7 @@ export class ProfileService {
       nickname: doc.nickname,
       avatar: doc.avatar,
       totalScore: type === 'weekly' ? doc.weeklyScore : doc.totalScore,
+      eloRating: doc.eloRating ?? DEFAULT_RATING,
       totalWins: doc.totalWins,
       totalGames: type === 'weekly' ? doc.weeklyGames : doc.totalGames,
       country: doc.country,

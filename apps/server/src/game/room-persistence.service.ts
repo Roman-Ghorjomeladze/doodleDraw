@@ -125,6 +125,8 @@ export class RoomPersistenceService {
         isHost: player.isHost,
         isConnected: player.isConnected,
         isSpectator: player.isSpectator ?? false,
+        isBot: player.isBot ?? false,
+        botDifficulty: player.botDifficulty,
       });
     }
 
@@ -192,8 +194,10 @@ export class RoomPersistenceService {
         isDrawing: false, // reset — no active drawing on startup
         hasDrawn: p.hasDrawn ?? false,
         isHost: p.isHost ?? false,
-        isConnected: false, // all disconnected on startup
+        isConnected: p.isBot ? true : false, // bots are always connected, humans disconnected on startup
         isSpectator: p.isSpectator ?? false,
+        isBot: p.isBot ?? false,
+        botDifficulty: p.botDifficulty,
       };
       players.set(p.persistentId, player);
     }
@@ -272,6 +276,7 @@ export class RoomPersistenceService {
       createdAt: doc.createdAt ?? Date.now(),
       currentRound,
       currentWord,
+      currentWordQuickDraw: null,
       wordHint,
       drawerId,
       teamADrawerId,

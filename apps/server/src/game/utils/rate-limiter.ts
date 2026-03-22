@@ -45,6 +45,16 @@ export const EVENT_RATE_LIMITS: Record<string, RateLimitRule> = {
   // Profile & Leaderboard
   'profile:get': { max: 5, windowMs: 10_000 },
   'leaderboard:get': { max: 3, windowMs: 10_000 },
+
+  // Canvas snapshot (for bot guessing)
+  'canvas:snapshot': { max: 2, windowMs: 5_000 },
+
+  // Bots
+  'room:addBot': { max: 5, windowMs: 10_000 },
+
+  // Lobbies
+  'lobbies:list': { max: 3, windowMs: 10_000 },
+  'lobbies:join': { max: 3, windowMs: 10_000 },
 };
 
 /** Global rate limit across ALL events from a single socket. */

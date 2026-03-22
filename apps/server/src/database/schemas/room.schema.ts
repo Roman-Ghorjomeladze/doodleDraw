@@ -35,6 +35,12 @@ export class PlayerDoc {
 
   @Prop({ default: false })
   isSpectator!: boolean;
+
+  @Prop({ default: false })
+  isBot!: boolean;
+
+  @Prop()
+  botDifficulty?: string;
 }
 
 /* ------------------------------------------------------------------ */

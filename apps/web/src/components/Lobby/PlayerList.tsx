@@ -142,6 +142,9 @@ function PlayerGroup({ players, showScores, currentPlayerId, onKickPlayer, onPla
                 {player.isDrawing && (
                   <span className="text-xs" title={t('player.drawing')}>✏️</span>
                 )}
+                {player.isBot && (
+                  <span className="text-[10px] px-1 py-0.5 rounded bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400" title="Bot">🤖</span>
+                )}
                 {player.isSpectator && (
                   <span className="text-[10px] px-1 py-0.5 rounded bg-surface-200 dark:bg-surface-600 text-surface-500 dark:text-surface-400">{t('spectator.badge')}</span>
                 )}

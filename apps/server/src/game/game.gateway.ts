@@ -4,6 +4,7 @@ import {
   SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
@@ -22,6 +23,9 @@ import { GameService } from './game.service';
 import { DrawingService } from './drawing.service';
 import { ProfileService } from './profile.service';
 import { AuthService } from '../auth/auth.service';
+import { BotSchedulerService } from './bot/bot-scheduler.service';
+import { PermanentLobbiesService } from './bot/permanent-lobbies.service';
+import { isBotId, createBotPlayer } from './bot/bot-player';
 import { RateLimiter } from './utils/rate-limiter';
 import {
   validateNickname,
@@ -48,7 +52,7 @@ const MAX_CHAT_HISTORY = 50;
   // Limit incoming payload size to 64KB to prevent oversized messages.
   maxHttpBufferSize: 64 * 1024,
 })
-export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
+export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, OnModuleDestroy {
   private readonly logger = new Logger(GameGateway.name);
   private readonly rateLimiter = new RateLimiter();
 
@@ -67,7 +71,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     private readonly drawingService: DrawingService,
     private readonly profileService: ProfileService,
     private readonly authService: AuthService,
+    private readonly botScheduler: BotSchedulerService,
+    private readonly permanentLobbies: PermanentLobbiesService,
   ) {}
+
+  afterInit(server: Server): void {
+    // Pass the server instance to bot services.
+    this.botScheduler.setServer(server);
+    this.permanentLobbies.setServer(server);
+
+    // Initialize permanent lobbies after a short delay (let other services initialize).
+    setTimeout(() => {
+      this.permanentLobbies.initLobbies();
+    }, 2000);
+  }
 
   onModuleDestroy(): void {
     this.rateLimiter.destroy();
@@ -285,11 +302,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     if (!result) return;
 
     const { room } = result;
+    const isPermanent = this.permanentLobbies.isPermanentLobby(room.id);
 
     await client.leave(room.id);
 
-    // If the game already ended, mark as declined in rematch and update.
-    if (gameFinished) {
+    // Handle permanent lobby player replacement.
+    if (isPermanent) {
+      this.permanentLobbies.handlePlayerLeft(room.id, client.id);
+      this.server.to(room.id).emit('room:updated', {
+        room: this.roomService.serializeRoom(room),
+      });
+    } else if (gameFinished) {
+      // If the game already ended, mark as declined in rematch and update.
       this.gameService.markRematchDeclined(client.id, room, this.server);
       this.server.to(room.id).emit('room:updated', {
         room: this.roomService.serializeRoom(room),
@@ -1029,6 +1053,190 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       if ((p.team === senderTeam && !p.isSpectator) || p.isSpectator) {
         this.server.to(id).emit('chat:message', message);
       }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Canvas snapshot (for bot guessing)
+  // ---------------------------------------------------------------------------
+
+  @SubscribeMessage('canvas:snapshot')
+  handleCanvasSnapshot(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { image: string },
+  ): void {
+    if (this.throttle(client, 'canvas:snapshot')) return;
+
+    const room = this.roomService.getRoomForPlayer(client.id);
+    if (!room || room.phase !== 'drawing') return;
+
+    if (!data?.image || typeof data.image !== 'string') return;
+
+    // Only accept snapshots up to ~500KB.
+    if (data.image.length > 500_000) return;
+
+    room.currentCanvasSnapshot = data.image;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Active game check
+  // ---------------------------------------------------------------------------
+
+  @SubscribeMessage('player:checkActiveGame')
+  handleCheckActiveGame(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { persistentId: string },
+  ): void {
+    if (!data?.persistentId) {
+      client.emit('player:activeGame', { roomId: null });
+      return;
+    }
+
+    const roomId = this.roomService.persistentPlayerRoomMap.get(data.persistentId);
+    if (!roomId) {
+      client.emit('player:activeGame', { roomId: null });
+      return;
+    }
+
+    const room = this.roomService.getRoom(roomId);
+    if (!room || room.phase === 'lobby' || room.phase === 'game_end') {
+      client.emit('player:activeGame', { roomId: null });
+      return;
+    }
+
+    // Player has an active game in progress
+    client.emit('player:activeGame', { roomId });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Permanent lobbies
+  // ---------------------------------------------------------------------------
+
+  @SubscribeMessage('lobbies:list')
+  handleLobbiesList(
+    @ConnectedSocket() client: Socket,
+  ): void {
+    // Subscribe to lobby state updates.
+    client.join('lobby_browser');
+
+    // Send current state immediately.
+    const lobbies = this.permanentLobbies.getLobbyStates();
+    client.emit('lobbies:state', { lobbies });
+  }
+
+  @SubscribeMessage('room:addBot')
+  handleAddBot(
+    @ConnectedSocket() client: Socket,
+  ): void {
+    if (this.throttle(client, 'room:addBot')) return;
+
+    const room = this.roomService.getRoomForPlayer(client.id);
+    if (!room) {
+      client.emit('room:error', { message: 'Not in a room' });
+      return;
+    }
+
+    // Only host can add bots.
+    const player = room.players.get(client.id);
+    if (!player?.isHost) {
+      client.emit('room:error', { message: 'Only the host can add bots' });
+      return;
+    }
+
+    // Only in lobby phase.
+    if (room.phase !== 'lobby') {
+      client.emit('room:error', { message: 'Can only add bots in lobby' });
+      return;
+    }
+
+    // Check room capacity.
+    if (room.players.size >= (room.settings?.maxPlayers || 16)) {
+      client.emit('room:error', { message: 'Room is full' });
+      return;
+    }
+
+    // Create and add a bot.
+    const bot = createBotPlayer({
+      roomId: room.id,
+      difficulty: 'medium',
+      team: room.mode === 'team' ? this.getTeamForNewBot(room) : undefined,
+    });
+
+    room.players.set(bot.id, bot);
+    this.roomService.playerRoomMap.set(bot.id, room.id);
+    this.roomService.persistentPlayerRoomMap.set(bot.persistentId, room.id);
+
+    this.logger.log(`Bot ${bot.nickname} added to room ${room.id} by host ${player.nickname}`);
+
+    // Broadcast updated room.
+    this.server.to(room.id).emit('room:updated', {
+      room: this.roomService.serializeRoom(room),
+    });
+  }
+
+  private getTeamForNewBot(room: any): 'A' | 'B' {
+    const teamA = Array.from(room.players.values()).filter((p: any) => p.team === 'A').length;
+    const teamB = Array.from(room.players.values()).filter((p: any) => p.team === 'B').length;
+    return teamA <= teamB ? 'A' : 'B';
+  }
+
+  @SubscribeMessage('lobbies:join')
+  async handleLobbiesJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { lobbyId: string; nickname: string; avatar: string; persistentId: string; language?: string },
+  ): Promise<void> {
+    if (this.throttle(client, 'lobbies:join')) return;
+
+    try {
+      const nickname = validateNickname(data?.nickname);
+      const avatar = validateAvatar(data?.avatar);
+      const persistentId = validatePersistentId(data?.persistentId);
+
+      if (!nickname || !avatar || !persistentId || !data?.lobbyId) {
+        client.emit('room:error', { message: 'Invalid input' });
+        return;
+      }
+
+      if (this.roomService.getRoomForPlayer(client.id)) {
+        client.emit('room:error', { message: 'Already in a room' });
+        return;
+      }
+
+      const player = {
+        id: client.id,
+        persistentId,
+        nickname,
+        avatar,
+        score: 0,
+        isDrawing: false,
+        hasDrawn: false,
+        isHost: false,
+        isConnected: true,
+      };
+
+      // Create a new bot game room for this player.
+      const language = data.language && ['en', 'ka', 'ru', 'tr'].includes(data.language) ? data.language : 'en';
+      const roomId = this.permanentLobbies.createBotGameForPlayer(data.lobbyId, player, language);
+      if (!roomId) {
+        client.emit('room:error', { message: 'Failed to create bot game' });
+        return;
+      }
+
+      // Join the Socket.IO room.
+      await client.join(roomId);
+
+      const room = this.roomService.getRoom(roomId);
+      if (!room) return;
+
+      const serialized = this.roomService.serializeRoom(room);
+      this.logger.log(`Bot game created: room=${roomId}, players=${serialized.players.length}, bots=${serialized.players.filter((p: any) => p.isBot).length}`);
+
+      client.emit('room:joined', {
+        room: serialized,
+        playerId: client.id,
+      });
+    } catch (err: any) {
+      client.emit('room:error', { message: err.message });
     }
   }
 }

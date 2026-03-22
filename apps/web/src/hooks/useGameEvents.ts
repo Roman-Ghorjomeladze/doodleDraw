@@ -63,6 +63,7 @@ export function useGameEvents() {
 
     unsubscribers.push(
       on('room:updated', ({ room }) => {
+        if (!room?.players) return;
         const state = useGameStore.getState();
         const currentPlayerId = usePlayerStore.getState().playerId;
 

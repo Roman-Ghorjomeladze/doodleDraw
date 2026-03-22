@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useAuthStore } from '@/stores/authStore';
+import { usePlayerStore } from '@/stores/playerStore';
+import { useSocket } from '@/hooks/useSocket';
+import { useGame } from '@/hooks/useGame';
 import { useTranslation } from '@/i18n';
 import CreateRoom from './CreateRoom';
 import JoinRoom from './JoinRoom';
 import AvailableRooms from './AvailableRooms';
 import OngoingGames from './OngoingGames';
 import Leaderboard from './Leaderboard';
+import PublicLobbies from './PublicLobbies';
 import AnimatedLogo from '@/components/UI/AnimatedLogo';
 
-type Tab = 'create' | 'join' | 'available' | 'ongoing' | 'leaderboard';
+type Tab = 'create' | 'join' | 'available' | 'ongoing' | 'leaderboard' | 'lobbies';
 
 interface TabConfig {
 	key: Tab;
@@ -107,6 +111,31 @@ const tabsConfig: TabConfig[] = [
 		),
 	},
 	{
+		key: 'lobbies',
+		labelKey: 'home.publicLobbies',
+		shortLabelKey: 'home.lobbiesShort',
+		icon: (
+			<svg
+				xmlns='http://www.w3.org/2000/svg'
+				width='18'
+				height='18'
+				viewBox='0 0 24 24'
+				fill='none'
+				stroke='currentColor'
+				strokeWidth='2'
+				strokeLinecap='round'
+				strokeLinejoin='round'
+			>
+				<rect x='3' y='11' width='18' height='10' rx='2' />
+				<circle cx='9' cy='16' r='1' />
+				<circle cx='15' cy='16' r='1' />
+				<path d='M8 11V7a4 4 0 0 1 8 0v4' />
+				<path d='M12 2v2' />
+				<path d='M9 2h6' />
+			</svg>
+		),
+	},
+	{
 		key: 'leaderboard',
 		labelKey: 'leaderboard.title',
 		shortLabelKey: 'leaderboard.title',
@@ -140,10 +169,32 @@ function hasRoomCodeInUrl(): boolean {
 
 export default function HomePage() {
 	const [tab, setTab] = useState<Tab>(() => (hasRoomCodeInUrl() ? 'join' : 'create'));
+	const [activeGameRoomId, setActiveGameRoomId] = useState<string | null>(null);
 	const { roomId } = useGameStore();
 	const { homeLayout } = useSettingsStore();
 	const { isAuthenticated } = useAuthStore();
 	const { t } = useTranslation();
+	const { on, emit } = useSocket();
+	const { joinRoom } = useGame();
+	const persistentId = usePlayerStore((s) => s.persistentId);
+	const nickname = usePlayerStore((s) => s.nickname);
+	const avatar = usePlayerStore((s) => s.avatar);
+
+	// Check for active game on mount
+	useEffect(() => {
+		if (!persistentId) return;
+		emit('player:checkActiveGame', { persistentId });
+
+		const unsub = on('player:activeGame', (data: { roomId: string | null }) => {
+			setActiveGameRoomId(data.roomId);
+		});
+		return unsub;
+	}, [persistentId, emit, on]);
+
+	const handleRejoin = useCallback(() => {
+		if (!activeGameRoomId || !nickname) return;
+		joinRoom(activeGameRoomId, nickname, avatar);
+	}, [activeGameRoomId, nickname, avatar, joinRoom]);
 
 	const isCompactTab = isAuthenticated && (tab === 'create' || tab === 'join');
 	const contentMinH = isCompactTab ? 'min-h-[300px]' : 'min-h-[565px]';
@@ -156,6 +207,7 @@ export default function HomePage() {
 			join: <JoinRoom />,
 			available: <AvailableRooms />,
 			ongoing: <OngoingGames />,
+			lobbies: <PublicLobbies />,
 			leaderboard: <Leaderboard />,
 		};
 
@@ -184,6 +236,35 @@ export default function HomePage() {
 				</h2>
 				<p className='text-surface-500 dark:text-surface-400'>{t('app.subtitle')}</p>
 			</motion.div>
+
+			{/* Active game rejoin banner */}
+			<AnimatePresence>
+				{activeGameRoomId && !roomId && (
+					<motion.div
+						initial={{ opacity: 0, y: -10 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -10 }}
+						className='mb-3 bg-primary-500/10 dark:bg-primary-500/20 border border-primary-500/30 rounded-card px-4 py-3 flex items-center justify-between gap-3'
+					>
+						<div className='flex items-center gap-2'>
+							<span className='relative flex h-2.5 w-2.5'>
+								<span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-500 opacity-75' />
+								<span className='relative inline-flex rounded-full h-2.5 w-2.5 bg-primary-500' />
+							</span>
+							<span className='text-sm font-medium text-primary-700 dark:text-primary-300'>
+								{t('home.activeGame')}
+							</span>
+							<span className='text-xs text-surface-500 font-mono'>{activeGameRoomId}</span>
+						</div>
+						<button
+							onClick={handleRejoin}
+							className='px-4 py-1.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-button transition-colors'
+						>
+							{t('home.rejoinGame')}
+						</button>
+					</motion.div>
+				)}
+			</AnimatePresence>
 
 			<motion.div layout transition={{ layout: { type: 'spring', stiffness: 120, damping: 24, mass: 0.8 } }} className='bg-white dark:bg-surface-800 rounded-card shadow-game-lg overflow-hidden'>
 				{isSidebar ? (

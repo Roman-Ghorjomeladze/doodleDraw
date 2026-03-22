@@ -13,6 +13,7 @@ import type {
   RematchState,
   PlayerProfile,
   LeaderboardEntry,
+  LobbyInfo,
 } from './game-types';
 
 export interface ClientToServerEvents {
@@ -39,6 +40,9 @@ export interface ClientToServerEvents {
   'reaction:send': (data: { emoji: string }) => void;
   'profile:get': (data: { persistentId: string }) => void;
   'leaderboard:get': (data: { type: 'allTime' | 'weekly' | 'country' | 'age'; country?: string; ageGroup?: string }) => void;
+  'canvas:snapshot': (data: { image: string }) => void;
+  'lobbies:list': () => void;
+  'lobbies:join': (data: { lobbyId: string; nickname: string; avatar: string; persistentId: string }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -102,4 +106,5 @@ export interface ServerToClientEvents {
   'reaction:received': (data: { emoji: string; nickname: string; playerId: string }) => void;
   'profile:data': (data: { profile: PlayerProfile | null }) => void;
   'leaderboard:data': (data: { players: LeaderboardEntry[]; type: string }) => void;
+  'lobbies:state': (data: { lobbies: LobbyInfo[] }) => void;
 }
