@@ -192,9 +192,9 @@ export default function HomePage() {
 	}, [persistentId, emit, on]);
 
 	const handleRejoin = useCallback(() => {
-		if (!activeGameRoomId || !nickname) return;
-		joinRoom(activeGameRoomId, nickname, avatar);
-	}, [activeGameRoomId, nickname, avatar, joinRoom]);
+		if (!activeGameRoomId) return;
+		joinRoom(activeGameRoomId);
+	}, [activeGameRoomId, joinRoom]);
 
 	const isCompactTab = isAuthenticated && (tab === 'create' || tab === 'join');
 	const contentMinH = isCompactTab ? 'min-h-[300px]' : 'min-h-[565px]';
