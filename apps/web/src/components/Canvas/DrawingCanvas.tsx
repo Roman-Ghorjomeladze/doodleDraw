@@ -359,13 +359,18 @@ export default function DrawingCanvas({
   }, [isDrawer, undoCanvas, getCtx]);
 
   // Emit canvas snapshots for bot guessing (every 5 seconds during drawing phase).
-  // Only the drawer sends snapshots — they have the authoritative canvas state.
+  // When human draws: human sends snapshots for bot guessers.
+  // When bot draws: human guesser sends snapshots so the server can see what's on canvas.
   useEffect(() => {
-    if (!isDrawer) return;
-
-    const { players, phase } = useGameStore.getState();
+    const { players, phase, drawerId } = useGameStore.getState();
     const hasBots = players.some((p) => p.isBot);
     if (!hasBots || phase !== 'drawing') return;
+
+    // Determine if we should send snapshots:
+    // 1. We are the drawer (human drawing, bot guessing)
+    // 2. The drawer is a bot (bot drawing, we need to send what we see)
+    const drawerIsBot = players.some((p) => p.id === drawerId && p.isBot);
+    if (!isDrawer && !drawerIsBot) return;
 
     const interval = setInterval(() => {
       const currentPhase = useGameStore.getState().phase;
