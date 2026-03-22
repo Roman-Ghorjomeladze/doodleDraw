@@ -266,12 +266,17 @@ export class BotDrawingService {
   }
 
   private sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(resolve, ms);
-      signal?.addEventListener('abort', () => {
+      const onAbort = () => {
         clearTimeout(timeout);
         reject(new DOMException('Aborted', 'AbortError'));
-      }, { once: true });
+      };
+      const timeout = setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort);
+        resolve();
+      }, ms);
+      signal?.addEventListener('abort', onAbort, { once: true });
     });
   }
 }
