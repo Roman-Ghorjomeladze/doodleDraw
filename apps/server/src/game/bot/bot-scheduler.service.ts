@@ -91,11 +91,17 @@ export class BotSchedulerService {
 
         // Attempt a guess.
         try {
+          // Provide letter count and revealed hints for better guessing.
+          const letterCount = room.currentWord?.length;
+          const revealedHints = room.wordHint ? [room.wordHint] : [];
+
           const guess = await this.botVision.guessFromSnapshot(
             room.currentCanvasSnapshot,
             room.wordHint,
             room.settings.language,
             state.previousGuesses,
+            letterCount,
+            revealedHints,
           );
 
           if (guess && this.server) {

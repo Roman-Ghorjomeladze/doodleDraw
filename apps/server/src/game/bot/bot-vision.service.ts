@@ -15,6 +15,8 @@ export class BotVisionService {
     wordHint: string,
     language: string,
     previousGuesses: string[] = [],
+    letterCount?: number,
+    revealedHints?: string[],
   ): Promise<string | null> {
     if (!this.apiKey) {
       this.logger.warn('ANTHROPIC_API_KEY not set — bot guessing disabled');
@@ -49,7 +51,7 @@ export class BotVisionService {
                 },
                 {
                   type: 'text',
-                  text: this.buildPrompt(wordHint, language, previousGuesses),
+                  text: this.buildPrompt(wordHint, language, previousGuesses, letterCount, revealedHints),
                 },
               ],
             },
@@ -93,13 +95,28 @@ export class BotVisionService {
     }
   }
 
-  private buildPrompt(wordHint: string, language: string, previousGuesses: string[] = []): string {
+  private buildPrompt(
+    wordHint: string,
+    language: string,
+    previousGuesses: string[] = [],
+    letterCount?: number,
+    revealedHints?: string[],
+  ): string {
     const langName = language === 'ka' ? 'Georgian' : language === 'tr' ? 'Turkish' : language === 'ru' ? 'Russian' : 'English';
 
     let prompt = `This is a Pictionary-style drawing game. Someone is drawing a word and you need to guess it.
 
 The word hint is: "${wordHint}" (underscores represent hidden letters, spaces separate words)
 The word is in ${langName}.`;
+
+    if (letterCount) {
+      prompt += `\nThe word has exactly ${letterCount} letters.`;
+    }
+
+    if (revealedHints && revealedHints.length > 0) {
+      const latestHint = revealedHints[revealedHints.length - 1];
+      prompt += `\nRevealed letters so far: "${latestHint}" (letters shown in their correct positions, underscores are still hidden)`;
+    }
 
     if (previousGuesses.length > 0) {
       prompt += `\n\nIMPORTANT: The following guesses were already tried and are WRONG. Do NOT guess any of these: ${previousGuesses.join(', ')}. You must guess a different word.`;

@@ -24,8 +24,8 @@ export class BotDrawingService {
 
   constructor(private readonly roomService: RoomService) {}
 
-  /** How long to wait before redrawing if nobody guessed (ms). */
-  private static readonly REDRAW_DELAY_MS = 30_000;
+  /** Redraw intervals from round start (ms). Bot clears and redraws at each. */
+  private static readonly REDRAW_TIMES_MS = [20_000, 40_000];
 
   /**
    * Start a bot drawing session. Runs asynchronously — returns immediately.
@@ -63,53 +63,55 @@ export class BotDrawingService {
       await this.sleep(2000 + Math.random() * 1000, controller.signal);
 
       // Fetch strokes — use quickDrawCategory from DB if available, fall back to word mapping.
-      const strokes = await this.fetchStrokes(word, quickDrawCategory);
+      const strokes = await this.fetchStrokes(word, quickDrawCategory, controller.signal);
       this.logger.debug(`Bot ${botId} fetched ${strokes.length} strokes for word="${word}"`);
 
       // Replay strokes.
       await this.replayStrokes(botId, room.id, strokes, config.strokeSpeedMultiplier, server, controller.signal);
       this.logger.debug(`Bot ${botId} finished drawing word="${word}"`);
 
-      // Wait for the redraw window — if nobody has guessed after 30s from round start, redraw.
-      const elapsed = Date.now() - roundStartTime;
-      const timeUntilRedraw = BotDrawingService.REDRAW_DELAY_MS - elapsed;
+      // Redraw loop — clear and draw again at each configured interval.
+      for (const redrawTime of BotDrawingService.REDRAW_TIMES_MS) {
+        const elapsed = Date.now() - roundStartTime;
+        const timeUntilRedraw = redrawTime - elapsed;
 
-      if (timeUntilRedraw > 0) {
-        await this.sleep(timeUntilRedraw, controller.signal);
+        if (timeUntilRedraw > 0) {
+          await this.sleep(timeUntilRedraw, controller.signal);
+        }
+
+        // Check if still in drawing phase (nobody guessed yet).
+        const currentRoom = this.roomService.getRoom(room.id);
+        if (!currentRoom || currentRoom.phase !== 'drawing') {
+          this.logger.debug(`Bot ${botId} skipping redraw — round already ended`);
+          return;
+        }
+
+        this.logger.log(`Bot ${botId} redrawing word="${word}" at ${redrawTime / 1000}s`);
+
+        // Clear the canvas.
+        const clearAction: DrawAction = {
+          type: 'clear',
+          points: [],
+          color: '#000000',
+          brushSize: 5,
+          tool: 'pen',
+          strokeId: `bot-clear-${Date.now()}`,
+          timestamp: Date.now(),
+          playerId: botId,
+        };
+        currentRoom.drawingHistory = [];
+        server.to(room.id).emit('draw:action', clearAction);
+
+        // Short pause after clear.
+        await this.sleep(1000 + Math.random() * 500, controller.signal);
+
+        // Fetch a DIFFERENT drawing of the same word.
+        const newStrokes = await this.fetchStrokes(word, quickDrawCategory, controller.signal);
+        this.logger.debug(`Bot ${botId} fetched ${newStrokes.length} new strokes for redraw`);
+
+        await this.replayStrokes(botId, room.id, newStrokes, config.strokeSpeedMultiplier, server, controller.signal);
+        this.logger.debug(`Bot ${botId} finished redrawing word="${word}"`);
       }
-
-      // Check if still in drawing phase (nobody guessed yet).
-      const currentRoom = this.roomService.getRoom(room.id);
-      if (!currentRoom || currentRoom.phase !== 'drawing') {
-        this.logger.debug(`Bot ${botId} skipping redraw — round already ended`);
-        return;
-      }
-
-      this.logger.log(`Bot ${botId} redrawing word="${word}" — nobody guessed in ${BotDrawingService.REDRAW_DELAY_MS / 1000}s`);
-
-      // Clear the canvas.
-      const clearAction: DrawAction = {
-        type: 'clear',
-        points: [],
-        color: '#000000',
-        brushSize: 5,
-        tool: 'pen',
-        strokeId: `bot-clear-${Date.now()}`,
-        timestamp: Date.now(),
-        playerId: botId,
-      };
-      currentRoom.drawingHistory = [];
-      server.to(room.id).emit('draw:action', clearAction);
-
-      // Short pause after clear.
-      await this.sleep(1000 + Math.random() * 500, controller.signal);
-
-      // Fetch a DIFFERENT drawing of the same word.
-      const newStrokes = await this.fetchStrokes(word, quickDrawCategory);
-      this.logger.debug(`Bot ${botId} fetched ${newStrokes.length} new strokes for redraw`);
-
-      await this.replayStrokes(botId, room.id, newStrokes, config.strokeSpeedMultiplier, server, controller.signal);
-      this.logger.debug(`Bot ${botId} finished redrawing word="${word}"`);
     } catch (err: any) {
       if (err.name === 'AbortError') {
         this.logger.debug(`Bot ${botId} drawing aborted`);
@@ -149,7 +151,7 @@ export class BotDrawingService {
   /**
    * Fetch strokes from Quick Draw dataset for the given word.
    */
-  private async fetchStrokes(word: string, quickDrawCategory?: string): Promise<number[][][]> {
+  private async fetchStrokes(word: string, quickDrawCategory?: string, abortSignal?: AbortSignal): Promise<number[][][]> {
     const category = quickDrawCategory || getQuickDrawCategory(word);
 
     if (!category) {
@@ -161,9 +163,10 @@ export class BotDrawingService {
       const url = `https://storage.googleapis.com/quickdraw_dataset/full/simplified/${encodeURIComponent(category)}.ndjson`;
 
       // Fetch a small chunk of the file (first ~100KB) to get a few drawings.
+      // Use the drawing's abort signal so the request is cancelled when the round ends.
       const response = await fetch(url, {
         headers: { Range: 'bytes=0-102400' },
-        signal: AbortSignal.timeout(10_000),
+        signal: abortSignal ?? AbortSignal.timeout(10_000),
       });
 
       if (!response.ok) {
@@ -224,6 +227,20 @@ export class BotDrawingService {
       const botState = botStates.get(botId);
       if (botState?.drawingAborted) {
         this.logger.debug(`Bot ${botId} abort: drawingAborted=true at stroke ${si}/${strokes.length}, room=${roomId}`);
+        throw new DOMException('Aborted', 'AbortError');
+      }
+
+      // Verify this bot is still the current drawer and room is still in drawing phase.
+      const currentRoom = this.roomService.getRoom(roomId);
+      if (!currentRoom || currentRoom.phase !== 'drawing') {
+        this.logger.debug(`Bot ${botId} abort: room phase changed (${currentRoom?.phase}), stopping drawing`);
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      const isStillDrawer = currentRoom.mode === 'classic'
+        ? currentRoom.drawerId === botId
+        : currentRoom.teamADrawerId === botId || currentRoom.teamBDrawerId === botId;
+      if (!isStillDrawer) {
+        this.logger.debug(`Bot ${botId} abort: no longer the drawer in room ${roomId}`);
         throw new DOMException('Aborted', 'AbortError');
       }
 

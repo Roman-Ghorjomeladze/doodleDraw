@@ -260,6 +260,16 @@ export default function DrawingCanvas({
   // Listen for remote draw actions
   useEffect(() => {
     const handleDrawAction = (data: DrawAction) => {
+      // Only render draw actions from the current drawer to prevent stale bot strokes
+      // from appearing on the canvas during turn transitions.
+      if (data.playerId) {
+        const { drawerId, teamADrawerId, teamBDrawerId } = useGameStore.getState();
+        const isFromDrawer = data.playerId === drawerId
+          || data.playerId === teamADrawerId
+          || data.playerId === teamBDrawerId;
+        if (!isFromDrawer) return;
+      }
+
       if (data.type === 'stroke' && data.points) {
         saveToHistory();
         drawLine(data.points, data.color || '#000', data.brushSize || 5, data.tool === 'eraser');
