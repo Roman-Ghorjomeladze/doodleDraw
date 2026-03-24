@@ -228,7 +228,7 @@ export default function HomePage() {
 	};
 
 	return (
-		<div className={`mx-auto my-auto sm:my-0 sm:mt-8 w-full ${isSidebar ? 'max-w-[44rem]' : 'max-w-[29.5rem]'}`}>
+		<div className={`mx-auto my-auto sm:my-0 sm:mt-8 w-full ${isSidebar ? 'max-w-[29.5rem] md:max-w-[44rem]' : 'max-w-[29.5rem]'}`}>
 			{/* Logo section - hidden on mobile to save space */}
 			<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className='text-center mb-4 sm:mb-8 hidden sm:block'>
 				<h2 className='mb-2'>
@@ -267,57 +267,58 @@ export default function HomePage() {
 			</AnimatePresence>
 
 			<motion.div layout transition={{ layout: { type: 'spring', stiffness: 120, damping: 24, mass: 0.8 } }} className='bg-white dark:bg-surface-800 rounded-card shadow-game-lg overflow-hidden'>
-				{isSidebar ? (
-					/* ── Sidebar layout ── */
-					<div className='flex min-h-[400px]'>
-						<div className='w-12 md:w-[14.4rem] flex-shrink-0 border-r border-surface-200 dark:border-surface-700 py-2 px-1 md:px-2 space-y-1'>
+				{/* ── Mobile: always show tabs in 2 rows of 3 ── */}
+				<div className={isSidebar ? 'md:hidden' : ''}>
+					<div className='flex border-b border-surface-200 dark:border-surface-700'>
+						{tabsConfig.map(({ key, shortLabelKey, labelKey, icon }) => (
+							<button
+								key={key}
+								onClick={() => setTab(key)}
+								title={t(labelKey as any)}
+								className={`flex-1 py-2.5 sm:py-3 px-2 text-sm font-semibold transition-colors relative flex items-center justify-center gap-1.5 min-w-0 ${
+									tab === key
+										? 'text-primary-600 dark:text-primary-400'
+										: 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+								}`}
+							>
+								{icon}
+								<span className='hidden sm:inline truncate text-sm'>{t(shortLabelKey as any)}</span>
+								{tab === key && (
+									<motion.div
+										layoutId='tab-indicator-mobile'
+										className='absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500'
+									/>
+								)}
+							</button>
+						))}
+					</div>
+
+					<div className={`p-4 sm:p-6 ${contentMinH}`}>{renderTabContent()}</div>
+				</div>
+
+				{/* ── Desktop sidebar layout (md+) ── */}
+				{isSidebar && (
+					<div className='hidden md:flex min-h-[400px]'>
+						<div className='w-[14.4rem] flex-shrink-0 border-r border-surface-200 dark:border-surface-700 py-2 px-2 space-y-1'>
 							{tabsConfig.map(({ key, labelKey, icon }) => (
 								<button
 									key={key}
 									onClick={() => setTab(key)}
 									title={t(labelKey as any)}
-									className={`w-full flex items-center justify-center md:justify-start gap-2.5 px-0 md:px-3 py-2.5 rounded-lg text-sm font-semibold transition-all text-left ${
+									className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all text-left ${
 										tab === key
 											? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
 											: 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-700/50'
 									}`}
 								>
 									{icon}
-									<span className='hidden md:inline truncate'>{t(labelKey as any)}</span>
+									<span className='truncate'>{t(labelKey as any)}</span>
 								</button>
 							))}
 						</div>
 
-						<div className={`flex-1 p-4 sm:p-6 overflow-y-auto ${contentMinH}`}>{renderTabContent()}</div>
+						<div className={`flex-1 p-6 overflow-y-auto ${contentMinH}`}>{renderTabContent()}</div>
 					</div>
-				) : (
-					/* ── Tabs layout ── */
-					<>
-						<div className='flex border-b border-surface-200 dark:border-surface-700 overflow-x-auto'>
-							{tabsConfig.map(({ key, shortLabelKey, icon }) => (
-								<button
-									key={key}
-									onClick={() => setTab(key)}
-									className={`flex-1 py-3 px-2 text-sm font-semibold transition-colors relative flex items-center justify-center gap-1.5 min-w-0 whitespace-nowrap ${
-										tab === key
-											? 'text-primary-600 dark:text-primary-400'
-											: 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
-									}`}
-								>
-									<span className='hidden sm:inline'>{icon}</span>
-									<span className='truncate text-xs sm:text-sm'>{t(shortLabelKey as any)}</span>
-									{tab === key && (
-										<motion.div
-											layoutId='tab-indicator'
-											className='absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500'
-										/>
-									)}
-								</button>
-							))}
-						</div>
-
-						<div className={`p-6 ${contentMinH}`}>{renderTabContent()}</div>
-					</>
 				)}
 			</motion.div>
 		</div>

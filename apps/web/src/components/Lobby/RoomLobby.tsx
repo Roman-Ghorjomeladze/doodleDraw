@@ -235,38 +235,38 @@ export default function RoomLobby() {
         </div>
 
         {/* Actions */}
-        <div className="mt-4 flex gap-3">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowLeaveConfirm(true)}
-            className="px-6 py-3 rounded-button bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 font-semibold transition-all"
-          >
-            {t('lobby.leave')}
-          </motion.button>
+        <div className="mt-4 space-y-3">
           {isHost && (
-            <>
-              {players.length < (settings?.maxPlayers || 16) && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={addBot}
-                  className="px-4 py-3 rounded-button bg-accent-500 hover:bg-accent-600 text-white font-semibold transition-all flex items-center gap-1.5"
-                >
-                  🤖 {t('lobby.addBot')}
-                </motion.button>
-              )}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={startGame}
+              disabled={!canStart}
+              className="w-full py-3 bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-600 text-white font-bold rounded-button shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {canStart ? t('lobby.startGame') : t('lobby.needMorePlayers', { count: minPlayers - players.length })}
+            </motion.button>
+          )}
+          <div className="flex gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowLeaveConfirm(true)}
+              className="flex-1 py-3 rounded-button bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 font-semibold transition-all"
+            >
+              {t('lobby.leave')}
+            </motion.button>
+            {isHost && players.length < (settings?.maxPlayers || 16) && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={startGame}
-                disabled={!canStart}
-                className="flex-1 py-3 bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-600 text-white font-bold rounded-button shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                onClick={addBot}
+                className="flex-1 py-3 rounded-button bg-accent-500 hover:bg-accent-600 text-white font-semibold transition-all flex items-center justify-center gap-1.5"
               >
-                {canStart ? t('lobby.startGame') : t('lobby.needMorePlayers', { count: minPlayers - players.length })}
+                🤖 {t('lobby.addBot')}
               </motion.button>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </motion.div>
 
