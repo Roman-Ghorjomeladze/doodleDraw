@@ -82,6 +82,7 @@ export interface ServerToClientEvents {
     roundNumber: number;
     currentWord?: string;
     handicap?: Handicap;
+    handicapTeam?: Team;
   }) => void;
   'team:roundWon': (data: { winningTeam: Team; points: number }) => void;
   'game:reconnected': (data: {

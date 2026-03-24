@@ -325,7 +325,7 @@ export function useGameEvents() {
     );
 
     unsubscribers.push(
-      on('team:roundStart', ({ teamADrawerId, teamBDrawerId, wordHint, roundNumber, currentWord, handicap }) => {
+      on('team:roundStart', ({ teamADrawerId, teamBDrawerId, wordHint, roundNumber, currentWord, handicap, handicapTeam }) => {
         const store = useGameStore.getState();
         store.setWordHint(wordHint);
         store.setWordOptions([]);
@@ -339,7 +339,11 @@ export function useGameEvents() {
         const currentPlayerId = usePlayerStore.getState().playerId;
         const isDrawer = currentPlayerId === teamADrawerId || currentPlayerId === teamBDrawerId;
         useDrawingStore.getState().setCanDraw(isDrawer);
-        useDrawingStore.getState().setHandicap(handicap ?? null);
+
+        // Only apply handicap to the drawer on the winning team
+        const myTeam = currentPlayerId === teamADrawerId ? 'A' : currentPlayerId === teamBDrawerId ? 'B' : null;
+        const shouldApplyHandicap = isDrawer && handicap && handicapTeam && myTeam === handicapTeam;
+        useDrawingStore.getState().setHandicap(shouldApplyHandicap ? handicap : null);
 
         if (isDrawer && currentWord) {
           store.setWordHint(currentWord);

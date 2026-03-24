@@ -230,6 +230,7 @@ export class GameService {
     } else {
       // Team mode: send word to both drawers, hint to everyone else.
       const handicap = this.teamMode.getHandicap(room);
+      const handicapTeam = room.lastWinningTeam || undefined;
 
       const drawerIds = [room.teamADrawerId, room.teamBDrawerId].filter(Boolean) as string[];
 
@@ -241,6 +242,7 @@ export class GameService {
           roundNumber: room.currentRound,
           currentWord: room.currentWord,
           handicap: handicap || undefined,
+          handicapTeam,
         });
       }
 
@@ -252,6 +254,7 @@ export class GameService {
           wordHint: room.wordHint,
           roundNumber: room.currentRound,
           handicap: handicap || undefined,
+          handicapTeam,
         });
       }
     }
@@ -658,6 +661,7 @@ export class GameService {
       }
     } else {
       const handicap = this.teamMode.getHandicap(room);
+      const handicapTeam = room.lastWinningTeam || undefined;
       const drawerIds = [room.teamADrawerId, room.teamBDrawerId].filter(Boolean) as string[];
       for (const did of drawerIds) {
         server.to(did).emit('team:roundStart', {
@@ -667,6 +671,7 @@ export class GameService {
           roundNumber: room.currentRound,
           currentWord: room.currentWord,
           handicap: handicap || undefined,
+          handicapTeam,
         });
       }
       for (const [pid, player] of room.players) {
@@ -677,6 +682,7 @@ export class GameService {
           wordHint: room.wordHint,
           roundNumber: room.currentRound,
           handicap: handicap || undefined,
+          handicapTeam,
         });
       }
     }

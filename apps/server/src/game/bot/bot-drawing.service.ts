@@ -100,7 +100,7 @@ export class BotDrawingService {
           playerId: botId,
         };
         currentRoom.drawingHistory = [];
-        server.to(room.id).emit('draw:action', clearAction);
+        this.emitDrawAction(botId, currentRoom, clearAction, server);
 
         // Short pause after clear.
         await this.sleep(1000 + Math.random() * 500, controller.signal);
@@ -273,12 +273,42 @@ export class BotDrawingService {
       // Store in drawing history.
       room.drawingHistory.push(action);
 
-      // Broadcast to all players in the room.
-      server.to(roomId).emit('draw:action', action);
+      // Broadcast using team-aware routing.
+      this.emitDrawAction(botId, room, action, server);
 
       // Pause between strokes (300–800ms, adjusted by difficulty).
       const delay = (300 + Math.random() * 500) * speedMultiplier;
       await this.sleep(delay, signal);
+    }
+  }
+
+  /**
+   * Emit a draw action respecting team mode routing.
+   * In classic mode, broadcasts to the whole room.
+   * In team mode, sends draw:action to same team and draw:actionBlurred to opponent.
+   */
+  private emitDrawAction(botId: string, room: Room, action: DrawAction, server: Server): void {
+    if (room.mode === 'classic') {
+      server.to(room.id).emit('draw:action', action);
+    } else {
+      const botPlayer = room.players.get(botId);
+      if (!botPlayer || !botPlayer.team) {
+        // Fallback: broadcast to room
+        server.to(room.id).emit('draw:action', action);
+        return;
+      }
+
+      const botTeam = botPlayer.team;
+      for (const [pid, player] of room.players) {
+        if (pid === botId) continue; // Don't send back to the bot
+        if (!player.isConnected) continue;
+
+        if (player.isSpectator || player.team === botTeam) {
+          server.to(pid).emit('draw:action', action);
+        } else {
+          server.to(pid).emit('draw:actionBlurred', action);
+        }
+      }
     }
   }
 
