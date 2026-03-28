@@ -60,7 +60,12 @@ export const DEFAULT_ROOM_SETTINGS = {
   teamBName: 'Team B',
 };
 
-export const HANDICAP_COLORS = ['#000000', '#E74C3C', '#3498DB', '#2ECC71'] as const;
+export const HANDICAP_COLORS = [
+  '#000000', '#FFFFFF', '#FF6B6B', '#4ECDC4', '#45B7D1',
+  '#96CEB4', '#FFEAA7', '#DDA0DD', '#F39C12', '#3498DB',
+  '#E74C3C', '#2ECC71', '#9B59B6', '#1ABC9C', '#E67E22',
+  '#FF69B4', '#00CED1', '#FF4500', '#7B68EE', '#32CD32',
+] as const;
 export const HANDICAP_MIN_BRUSH_SIZE = 20;
 
 export const REACTION_EMOJIS = [
