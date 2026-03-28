@@ -60,7 +60,7 @@ export const DEFAULT_ROOM_SETTINGS = {
   teamBName: 'Team B',
 };
 
-export const HANDICAP_COLORS = ['#000000', '#FF0000', '#0000FF', '#00FF00'] as const;
+export const HANDICAP_COLORS = ['#000000', '#E74C3C', '#3498DB', '#2ECC71'] as const;
 export const HANDICAP_MIN_BRUSH_SIZE = 20;
 
 export const REACTION_EMOJIS = [
