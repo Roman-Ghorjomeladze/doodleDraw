@@ -13,12 +13,18 @@ import { BotDrawingService } from './bot/bot-drawing.service';
 import { BotVisionService } from './bot/bot-vision.service';
 import { BotSchedulerService } from './bot/bot-scheduler.service';
 import { PermanentLobbiesService } from './bot/permanent-lobbies.service';
+import { OnlineTrackerService } from './online-tracker.service';
+import { FriendService } from './friend.service';
+import { FriendsController } from './friends.controller';
 
 @Module({
   imports: [WordsModule, AuthModule],
+  controllers: [FriendsController],
   providers: [
     RoomPersistenceService,
     ProfileService,
+    OnlineTrackerService,
+    FriendService,
     RoomService,
     ClassicModeService,
     TeamModeService,

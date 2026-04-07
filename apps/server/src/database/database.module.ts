@@ -8,6 +8,8 @@ import { Word, WordSchema } from './schemas/word.schema';
 import { RoomDoc, RoomDocSchema } from './schemas/room.schema';
 import { ProfileDoc, ProfileDocSchema } from './schemas/profile.schema';
 import { AuthTokenDoc, AuthTokenDocSchema } from './schemas/auth-token.schema';
+import { FriendshipDoc, FriendshipDocSchema } from './schemas/friendship.schema';
+import { FriendRequestDoc, FriendRequestDocSchema } from './schemas/friend-request.schema';
 
 @Global()
 @Module({
@@ -25,6 +27,8 @@ import { AuthTokenDoc, AuthTokenDocSchema } from './schemas/auth-token.schema';
       { name: RoomDoc.name, schema: RoomDocSchema },
       { name: ProfileDoc.name, schema: ProfileDocSchema },
       { name: AuthTokenDoc.name, schema: AuthTokenDocSchema },
+      { name: FriendshipDoc.name, schema: FriendshipDocSchema },
+      { name: FriendRequestDoc.name, schema: FriendRequestDocSchema },
     ]),
   ],
   exports: [MongooseModule],

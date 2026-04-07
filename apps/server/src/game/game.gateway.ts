@@ -22,10 +22,13 @@ import { RoomService } from './room.service';
 import { GameService } from './game.service';
 import { DrawingService } from './drawing.service';
 import { ProfileService } from './profile.service';
+import { FriendService } from './friend.service';
+import { OnlineTrackerService } from './online-tracker.service';
 import { AuthService } from '../auth/auth.service';
 import { BotSchedulerService } from './bot/bot-scheduler.service';
 import { PermanentLobbiesService } from './bot/permanent-lobbies.service';
 import { isBotId, createBotPlayer } from './bot/bot-player';
+import type { GameInvite } from '@doodledraw/shared';
 import { RateLimiter } from './utils/rate-limiter';
 import {
   validateNickname,
@@ -62,6 +65,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
   /** Map socket ID → authenticated persistentId for logged-in users. */
   private readonly authenticatedSockets = new Map<string, string>();
 
+  /** Pending game invites with auto-expiry timers. */
+  private readonly pendingInvites = new Map<string, { invite: GameInvite; timer: NodeJS.Timeout }>();
+
   @WebSocketServer()
   server!: Server;
 
@@ -70,6 +76,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     private readonly gameService: GameService,
     private readonly drawingService: DrawingService,
     private readonly profileService: ProfileService,
+    private readonly friendService: FriendService,
+    private readonly onlineTracker: OnlineTrackerService,
     private readonly authService: AuthService,
     private readonly botScheduler: BotSchedulerService,
     private readonly permanentLobbies: PermanentLobbiesService,
@@ -126,12 +134,27 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
       if (persistentId) {
         this.authenticatedSockets.set(client.id, persistentId);
         this.logger.log(`Authenticated socket ${client.id} as ${persistentId}`);
+
+        // Track online status and notify friends.
+        const cameOnline = this.onlineTracker.addSocket(client.id, persistentId);
+        if (cameOnline) {
+          this.broadcastFriendStatus(persistentId, true);
+        }
       }
     }
   }
 
   handleDisconnect(client: Socket): void {
     this.logger.log(`Client disconnected: ${client.id}`);
+
+    // Track online status for authenticated users before clearing auth.
+    const persistentId = this.authenticatedSockets.get(client.id);
+    if (persistentId) {
+      const wentOffline = this.onlineTracker.removeSocket(client.id, persistentId);
+      if (wentOffline) {
+        this.broadcastFriendStatus(persistentId, false);
+      }
+    }
 
     // Clean up auth and rate limiter state for this socket.
     this.authenticatedSockets.delete(client.id);
@@ -230,6 +253,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
       this.broadcastPublicRooms();
       this.broadcastOngoingGames();
+
+      // Notify friends that this user is now in a room.
+      const authPid = this.authenticatedSockets.get(client.id);
+      if (authPid) this.broadcastFriendStatus(authPid, true);
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
@@ -280,6 +307,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
       this.broadcastPublicRooms();
       this.broadcastOngoingGames();
+
+      // Notify friends that this user joined a room.
+      const authPid = this.authenticatedSockets.get(client.id);
+      if (authPid) this.broadcastFriendStatus(authPid, true);
     } catch (err: any) {
       client.emit('room:error', { message: err.message });
     }
@@ -337,6 +368,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     this.broadcastPublicRooms();
     this.broadcastOngoingGames();
+
+    // Notify friends that this user left a room.
+    const authPid = this.authenticatedSockets.get(client.id);
+    if (authPid) this.broadcastFriendStatus(authPid, true);
   }
 
   @SubscribeMessage('room:settings')
@@ -1178,6 +1213,274 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     const teamA = Array.from(room.players.values()).filter((p: any) => p.team === 'A').length;
     const teamB = Array.from(room.players.values()).filter((p: any) => p.team === 'B').length;
     return teamA <= teamB ? 'A' : 'B';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Friends
+  // ---------------------------------------------------------------------------
+
+  private async broadcastFriendStatus(persistentId: string, isOnline: boolean): Promise<void> {
+    try {
+      const friendIds = await this.friendService.getFriendPersistentIds(persistentId);
+      const roomId = this.roomService.persistentPlayerRoomMap.get(persistentId) ?? null;
+      for (const fid of friendIds) {
+        const sockets = this.onlineTracker.getSocketIds(fid);
+        for (const sid of sockets) {
+          this.server.to(sid).emit('friends:statusChanged', {
+            persistentId,
+            isOnline,
+            currentRoomId: roomId,
+          });
+        }
+      }
+    } catch {
+      // Fire-and-forget — don't break connection lifecycle.
+    }
+  }
+
+  private emitToUser(persistentId: string, event: string, data: any): void {
+    const sockets = this.onlineTracker.getSocketIds(persistentId);
+    for (const sid of sockets) {
+      this.server.to(sid).emit(event as any, data);
+    }
+  }
+
+  @SubscribeMessage('friends:list')
+  async handleFriendsList(
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    if (this.throttle(client, 'friends:list')) return;
+    const persistentId = this.authenticatedSockets.get(client.id);
+    if (!persistentId) {
+      client.emit('friends:error', { message: 'Authentication required' });
+      return;
+    }
+    try {
+      const friends = await this.friendService.getFriends(persistentId);
+      client.emit('friends:list', { friends });
+    } catch (err: any) {
+      client.emit('friends:error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('friends:search')
+  async handleFriendsSearch(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { query: string },
+  ): Promise<void> {
+    if (this.throttle(client, 'friends:search')) return;
+    const persistentId = this.authenticatedSockets.get(client.id);
+    if (!persistentId) {
+      client.emit('friends:error', { message: 'Authentication required' });
+      return;
+    }
+    const query = data?.query?.trim();
+    if (!query || query.length < 2 || query.length > 20) {
+      client.emit('friends:searchResults', { users: [] });
+      return;
+    }
+    try {
+      const users = await this.friendService.searchUsers(query, persistentId);
+      client.emit('friends:searchResults', { users });
+    } catch (err: any) {
+      client.emit('friends:error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('friends:requestSend')
+  async handleFriendsRequestSend(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { targetPersistentId: string },
+  ): Promise<void> {
+    if (this.throttle(client, 'friends:requestSend')) return;
+    const persistentId = this.authenticatedSockets.get(client.id);
+    if (!persistentId) {
+      client.emit('friends:error', { message: 'Authentication required' });
+      return;
+    }
+    if (!data?.targetPersistentId) {
+      client.emit('friends:error', { message: 'Invalid target' });
+      return;
+    }
+    try {
+      const { request, autoAccepted } = await this.friendService.sendFriendRequest(
+        persistentId,
+        data.targetPersistentId,
+      );
+
+      if (autoAccepted) {
+        // Both users become friends — notify both.
+        this.emitToUser(persistentId, 'friends:requestUpdated', {
+          requestId: request.id,
+          status: 'accepted',
+        });
+        this.emitToUser(data.targetPersistentId, 'friends:requestUpdated', {
+          requestId: request.id,
+          status: 'accepted',
+        });
+        // Refresh friends lists for both.
+        const [myFriends, theirFriends] = await Promise.all([
+          this.friendService.getFriends(persistentId),
+          this.friendService.getFriends(data.targetPersistentId),
+        ]);
+        this.emitToUser(persistentId, 'friends:list', { friends: myFriends });
+        this.emitToUser(data.targetPersistentId, 'friends:list', { friends: theirFriends });
+      } else {
+        client.emit('friends:requestSent', { request });
+        this.emitToUser(data.targetPersistentId, 'friends:requestReceived', { request });
+      }
+    } catch (err: any) {
+      client.emit('friends:error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('friends:requestRespond')
+  async handleFriendsRequestRespond(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { requestId: string; action: 'accept' | 'reject' },
+  ): Promise<void> {
+    if (this.throttle(client, 'friends:requestRespond')) return;
+    const persistentId = this.authenticatedSockets.get(client.id);
+    if (!persistentId) {
+      client.emit('friends:error', { message: 'Authentication required' });
+      return;
+    }
+    if (!data?.requestId || !['accept', 'reject'].includes(data?.action)) {
+      client.emit('friends:error', { message: 'Invalid input' });
+      return;
+    }
+    try {
+      const { fromPersistentId, toPersistentId } = await this.friendService.respondToRequest(
+        data.requestId,
+        persistentId,
+        data.action,
+      );
+      const status = data.action === 'accept' ? 'accepted' : 'rejected';
+      this.emitToUser(fromPersistentId, 'friends:requestUpdated', { requestId: data.requestId, status });
+      this.emitToUser(toPersistentId, 'friends:requestUpdated', { requestId: data.requestId, status });
+
+      if (data.action === 'accept') {
+        const [senderFriends, responderFriends] = await Promise.all([
+          this.friendService.getFriends(fromPersistentId),
+          this.friendService.getFriends(toPersistentId),
+        ]);
+        this.emitToUser(fromPersistentId, 'friends:list', { friends: senderFriends });
+        this.emitToUser(toPersistentId, 'friends:list', { friends: responderFriends });
+      }
+    } catch (err: any) {
+      client.emit('friends:error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('friends:remove')
+  async handleFriendsRemove(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { friendPersistentId: string },
+  ): Promise<void> {
+    if (this.throttle(client, 'friends:remove')) return;
+    const persistentId = this.authenticatedSockets.get(client.id);
+    if (!persistentId) {
+      client.emit('friends:error', { message: 'Authentication required' });
+      return;
+    }
+    if (!data?.friendPersistentId) {
+      client.emit('friends:error', { message: 'Invalid input' });
+      return;
+    }
+    try {
+      await this.friendService.removeFriend(persistentId, data.friendPersistentId);
+      this.emitToUser(persistentId, 'friends:removed', { friendPersistentId: data.friendPersistentId });
+      this.emitToUser(data.friendPersistentId, 'friends:removed', { friendPersistentId: persistentId });
+    } catch (err: any) {
+      client.emit('friends:error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('friends:pendingList')
+  async handleFriendsPendingList(
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    if (this.throttle(client, 'friends:pendingList')) return;
+    const persistentId = this.authenticatedSockets.get(client.id);
+    if (!persistentId) {
+      client.emit('friends:error', { message: 'Authentication required' });
+      return;
+    }
+    try {
+      const { incoming, outgoing } = await this.friendService.getPendingRequests(persistentId);
+      client.emit('friends:pendingList', { incoming, outgoing });
+    } catch (err: any) {
+      client.emit('friends:error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('friends:inviteToGame')
+  async handleFriendsInviteToGame(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { friendPersistentId: string; roomId: string },
+  ): Promise<void> {
+    if (this.throttle(client, 'friends:inviteToGame')) return;
+    const persistentId = this.authenticatedSockets.get(client.id);
+    if (!persistentId) {
+      client.emit('friends:error', { message: 'Authentication required' });
+      return;
+    }
+    if (!data?.friendPersistentId || !data?.roomId) {
+      client.emit('friends:error', { message: 'Invalid input' });
+      return;
+    }
+
+    // Validate room exists and is joinable.
+    const room = this.roomService.getRoom(data.roomId);
+    if (!room || room.phase !== 'lobby') {
+      client.emit('friends:error', { message: 'Room is not available' });
+      return;
+    }
+    if (room.players.size >= (room.settings?.maxPlayers || 16)) {
+      client.emit('friends:error', { message: 'Room is full' });
+      return;
+    }
+
+    // Validate target is not already in this room.
+    const targetRoomId = this.roomService.persistentPlayerRoomMap.get(data.friendPersistentId);
+    if (targetRoomId === data.roomId) {
+      client.emit('friends:error', { message: 'Friend is already in this game' });
+      return;
+    }
+
+    // Validate target is a friend and online.
+    const isFriend = await this.friendService.areFriends(persistentId, data.friendPersistentId);
+    if (!isFriend) {
+      client.emit('friends:error', { message: 'Not your friend' });
+      return;
+    }
+    if (!this.onlineTracker.isOnline(data.friendPersistentId)) {
+      client.emit('friends:error', { message: 'Friend is offline' });
+      return;
+    }
+
+    // Get sender info from the room.
+    const senderPlayer = room.players.get(client.id);
+    const inviteId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+    const invite: GameInvite = {
+      id: inviteId,
+      fromPersistentId: persistentId,
+      fromNickname: senderPlayer?.nickname ?? 'Someone',
+      fromAvatar: senderPlayer?.avatar ?? 'default',
+      roomId: data.roomId,
+      mode: room.mode,
+      timestamp: Date.now(),
+    };
+
+    // Auto-expire after 60 seconds.
+    const timer = setTimeout(() => {
+      this.pendingInvites.delete(inviteId);
+      this.emitToUser(data.friendPersistentId, 'friends:inviteExpired', { inviteId });
+    }, 60_000);
+
+    this.pendingInvites.set(inviteId, { invite, timer });
+    this.emitToUser(data.friendPersistentId, 'friends:gameInvite', { invite });
   }
 
   @SubscribeMessage('lobbies:join')

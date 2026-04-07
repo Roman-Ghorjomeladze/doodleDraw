@@ -11,7 +11,7 @@ import { translate } from '@/i18n';
  * Must be called from a single top-level component (App).
  */
 export function useGameEvents() {
-  const { on } = useSocket();
+  const { on, socketVersion } = useSocket();
 
   useEffect(() => {
     const unsubscribers: (() => void)[] = [];
@@ -508,5 +508,5 @@ export function useGameEvents() {
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [on]);
+  }, [on, socketVersion]);
 }

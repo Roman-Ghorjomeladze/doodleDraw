@@ -14,6 +14,11 @@ import type {
   PlayerProfile,
   LeaderboardEntry,
   LobbyInfo,
+  FriendInfo,
+  FriendRequest,
+  FriendRequestStatus,
+  GameInvite,
+  FriendSearchResult,
 } from './game-types';
 
 export interface ClientToServerEvents {
@@ -45,6 +50,15 @@ export interface ClientToServerEvents {
   'lobbies:join': (data: { lobbyId: string; nickname: string; avatar: string; persistentId: string; language?: string }) => void;
   'room:addBot': () => void;
   'player:checkActiveGame': (data: { persistentId: string }) => void;
+
+  // Friends
+  'friends:list': () => void;
+  'friends:search': (data: { query: string }) => void;
+  'friends:requestSend': (data: { targetPersistentId: string }) => void;
+  'friends:requestRespond': (data: { requestId: string; action: 'accept' | 'reject' }) => void;
+  'friends:remove': (data: { friendPersistentId: string }) => void;
+  'friends:pendingList': () => void;
+  'friends:inviteToGame': (data: { friendPersistentId: string; roomId: string }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -111,4 +125,17 @@ export interface ServerToClientEvents {
   'leaderboard:data': (data: { players: LeaderboardEntry[]; type: string }) => void;
   'lobbies:state': (data: { lobbies: LobbyInfo[] }) => void;
   'player:activeGame': (data: { roomId: string | null }) => void;
+
+  // Friends
+  'friends:list': (data: { friends: FriendInfo[] }) => void;
+  'friends:searchResults': (data: { users: FriendSearchResult[] }) => void;
+  'friends:requestReceived': (data: { request: FriendRequest }) => void;
+  'friends:requestSent': (data: { request: FriendRequest }) => void;
+  'friends:requestUpdated': (data: { requestId: string; status: FriendRequestStatus }) => void;
+  'friends:pendingList': (data: { incoming: FriendRequest[]; outgoing: FriendRequest[] }) => void;
+  'friends:removed': (data: { friendPersistentId: string }) => void;
+  'friends:statusChanged': (data: { persistentId: string; isOnline: boolean; currentRoomId: string | null }) => void;
+  'friends:error': (data: { message: string }) => void;
+  'friends:gameInvite': (data: { invite: GameInvite }) => void;
+  'friends:inviteExpired': (data: { inviteId: string }) => void;
 }

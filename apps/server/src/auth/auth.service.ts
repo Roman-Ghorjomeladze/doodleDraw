@@ -23,10 +23,10 @@ export class AuthService {
   ) {}
 
   async register(data: AuthRegisterRequest): Promise<AuthResponse> {
-    // Validate username format.
+    // Validate username format (allows classic usernames or email addresses).
     const username = data.username?.toLowerCase().trim();
-    if (!username || !/^[a-z0-9_]{3,20}$/.test(username)) {
-      throw new Error('Username must be 3-20 characters (letters, numbers, underscores)');
+    if (!username || !/^([a-z0-9_]{3,20}|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})$/.test(username)) {
+      throw new Error('Username must be 3-20 characters (letters, numbers, underscores) or a valid email');
     }
 
     // Validate password.

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/stores/gameStore';
+import { useAuthStore } from '@/stores/authStore';
+import { useFriendStore } from '@/stores/friendStore';
 import { useGame } from '@/hooks/useGame';
 import { useTranslation } from '@/i18n';
 import SettingsPanel from './SettingsPanel';
@@ -10,6 +12,9 @@ import RulesModal from '@/components/RulesModal';
 
 export default function Header() {
   const { roomId, phase } = useGameStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const incomingRequests = useFriendStore((s) => s.incomingRequests);
+  const gameInvites = useFriendStore((s) => s.gameInvites);
   const { leaveRoom } = useGame();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -58,6 +63,26 @@ export default function Header() {
                   <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                   <path d="M12 17h.01" />
                 </svg>
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                onClick={() => useFriendStore.getState().setSidebarOpen(true)}
+                className="p-2 rounded-button hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors relative"
+                aria-label={t('friends.title')}
+                title={t('friends.title')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                {(incomingRequests.length + gameInvites.length) > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4.5 h-4.5 text-[10px] font-bold bg-danger-500 text-white rounded-full">
+                    {incomingRequests.length + gameInvites.length}
+                  </span>
+                )}
               </button>
             )}
             <button

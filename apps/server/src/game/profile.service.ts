@@ -63,9 +63,9 @@ export class ProfileService {
       const eloResults = calculateGameElo(eloPlayers);
       this.logger.log(`Elo results: ${JSON.stringify(Object.fromEntries(eloResults))}`);
 
-      // Update all players (including bots for stats, but bots don't get Elo).
+      // Update human players only — bots are not persisted.
       for (const [_socketId, player] of room.players) {
-        if (player.isSpectator) continue;
+        if (player.isSpectator || player.isBot) continue;
 
         const scoreEntry = finalScores.find((s) => s.playerId === _socketId);
         if (!scoreEntry) continue;
@@ -227,6 +227,9 @@ export class ProfileService {
       query = { totalGames: { $gt: 0 } };
       sortField = 'eloRating';
     }
+
+    // Exclude bot profiles from leaderboards.
+    query.persistentId = { $not: /^bot-/ };
 
     const docs = await this.profileModel
       .find(query)

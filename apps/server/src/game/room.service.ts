@@ -153,17 +153,24 @@ export class RoomService implements OnModuleInit {
       throw new Error('Room is full');
     }
 
-    // Check for duplicate nickname
-    for (const [, player] of room.players) {
-      if (player.nickname.toLowerCase() === nickname.toLowerCase() && player.isConnected) {
-        throw new Error('Nickname already taken');
+    // Auto-deduplicate nickname if already taken in the room.
+    let uniqueNickname = nickname;
+    const takenNicknames = new Set<string>();
+    for (const [, p] of room.players) {
+      if (p.isConnected) takenNicknames.add(p.nickname.toLowerCase());
+    }
+    if (takenNicknames.has(uniqueNickname.toLowerCase())) {
+      let suffix = 2;
+      while (takenNicknames.has(`${nickname}${suffix}`.toLowerCase())) {
+        suffix++;
       }
+      uniqueNickname = `${nickname}${suffix}`;
     }
 
     const player: Player = {
       id: playerId,
       persistentId,
-      nickname,
+      nickname: uniqueNickname,
       avatar,
       score: 0,
       isDrawing: false,
@@ -200,17 +207,24 @@ export class RoomService implements OnModuleInit {
       throw new Error('Room not found');
     }
 
-    // Check for duplicate nickname.
-    for (const [, player] of room.players) {
-      if (player.nickname.toLowerCase() === nickname.toLowerCase() && player.isConnected) {
-        throw new Error('Nickname already taken');
+    // Auto-deduplicate nickname if already taken in the room.
+    let uniqueNickname = nickname;
+    const takenNicknames = new Set<string>();
+    for (const [, p] of room.players) {
+      if (p.isConnected) takenNicknames.add(p.nickname.toLowerCase());
+    }
+    if (takenNicknames.has(uniqueNickname.toLowerCase())) {
+      let suffix = 2;
+      while (takenNicknames.has(`${nickname}${suffix}`.toLowerCase())) {
+        suffix++;
       }
+      uniqueNickname = `${nickname}${suffix}`;
     }
 
     const player: Player = {
       id: playerId,
       persistentId,
-      nickname,
+      nickname: uniqueNickname,
       avatar,
       score: 0,
       isDrawing: false,
@@ -250,12 +264,21 @@ export class RoomService implements OnModuleInit {
       this.persistentPlayerRoomMap.delete(player.persistentId);
     }
 
-    // If room is now empty, delete it — unless it's a permanent lobby.
-    if (room.players.size === 0 && !room.isPermanentLobby) {
+    // Check if room has no real (human) players left.
+    const hasHumanPlayers = Array.from(room.players.values()).some((p) => !p.isBot);
+
+    // If room is now empty or only bots remain, delete it — unless it's a permanent lobby.
+    if ((room.players.size === 0 || !hasHumanPlayers) && !room.isPermanentLobby) {
       this.cancelCleanup(roomId);
+      // Clean up bot mappings too.
+      for (const [, p] of room.players) {
+        this.playerRoomMap.delete(p.id);
+        if (p.persistentId) this.persistentPlayerRoomMap.delete(p.persistentId);
+      }
+      room.players.clear();
       this.rooms.delete(roomId);
       this.persistence.deleteRoom(roomId);
-      this.logger.log(`Room ${roomId} deleted (all players left)`);
+      this.logger.log(`Room ${roomId} deleted (no human players left)`);
       return { room, wasHost };
     }
 
@@ -600,8 +623,8 @@ export class RoomService implements OnModuleInit {
       const room = this.rooms.get(roomId);
       if (!room) return;
 
-      const anyConnected = Array.from(room.players.values()).some((p) => p.isConnected);
-      if (!anyConnected && !room.isPermanentLobby) {
+      const anyHumanConnected = Array.from(room.players.values()).some((p) => p.isConnected && !p.isBot);
+      if (!anyHumanConnected && !room.isPermanentLobby) {
         this.rooms.delete(roomId);
         this.persistence.deleteRoom(roomId);
         // Clean up player-room mappings for remaining entries.

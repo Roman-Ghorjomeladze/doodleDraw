@@ -25,6 +25,9 @@ let connectionState: ConnectionState = {
 
 const listeners = new Set<() => void>();
 
+/** Incremented on every reconnectWithAuth() so hooks can re-register listeners. */
+let socketVersion = 0;
+
 function getConnectionState() {
   return connectionState;
 }
@@ -128,6 +131,9 @@ export function reconnectWithAuth(): void {
     socketInstance = null;
   }
   createSocket();
+  // Bump version so hooks re-register their listeners on the new socket.
+  socketVersion++;
+  setConnectionState({ ...connectionState });
 }
 
 function getSocket(): TypedSocket {
@@ -140,7 +146,11 @@ function getSocket(): TypedSocket {
 // ── Hook ────────────────────────────────────────────────────────────────
 
 export function useSocket() {
-  const socket = useRef<TypedSocket>(getSocket());
+  // Always read the live socket — getSocket() returns the current singleton.
+  // This ensures emit/on always use the active socket even after reconnectWithAuth().
+  const socketRef = useRef<TypedSocket>(getSocket());
+  // Keep the ref in sync with the current singleton on every render.
+  socketRef.current = getSocket();
 
   // All consumers share the same connection state via useSyncExternalStore
   const state = useSyncExternalStore(
@@ -154,7 +164,8 @@ export function useSocket() {
       event: E,
       ...args: Parameters<ClientToServerEvents[E]>
     ) => {
-      socket.current.emit(event, ...args);
+      // Read from getSocket() directly to guarantee we use the live socket.
+      getSocket().emit(event, ...args);
     },
     [],
   );
@@ -164,7 +175,7 @@ export function useSocket() {
       event: E,
       handler: ServerToClientEvents[E],
     ) => {
-      const s = socket.current;
+      const s = getSocket();
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       s.on(event, handler as any);
@@ -193,7 +204,7 @@ export function useSocket() {
   }, []);
 
   return {
-    socket,
+    socket: socketRef,
     emit,
     on,
     connected: state.connected,
@@ -201,5 +212,7 @@ export function useSocket() {
     reconnectAttempt: state.reconnectAttempt,
     reconnectFailed: state.reconnectFailed,
     manualReconnect,
+    /** Changes when the socket is recreated (e.g. after login/logout). Use as a useEffect dep to re-register listeners. */
+    socketVersion,
   };
 }

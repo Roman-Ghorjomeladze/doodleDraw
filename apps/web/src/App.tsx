@@ -3,6 +3,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useGameEvents } from '@/hooks/useGameEvents';
 import { useConfetti } from '@/hooks/useConfetti';
+import { useFriendEvents } from '@/hooks/useFriendEvents';
 import { useUrlSync } from '@/hooks/useUrlSync';
 import HomePage from '@/components/Lobby/HomePage';
 import RoomLobby from '@/components/Lobby/RoomLobby';
@@ -10,6 +11,8 @@ import GameRoom from '@/components/Game/GameRoom';
 import Header from '@/components/Layout/Header';
 import ConnectionStatus from '@/components/UI/ConnectionStatus';
 import PlayerLeftNotice from '@/components/UI/PlayerLeftNotice';
+import FriendsSidebar from '@/components/Friends/FriendsSidebar';
+import GameInviteToast from '@/components/Friends/GameInviteToast';
 import AdminPanel from '@/components/Admin/AdminPanel';
 
 export default function App() {
@@ -19,6 +22,7 @@ export default function App() {
 
   // Register socket event listeners once at the top level
   useGameEvents();
+  useFriendEvents();
   useConfetti();
 
   // Sync URL with game room state
@@ -50,6 +54,8 @@ export default function App() {
         {roomId && phase !== 'lobby' && <GameRoom />}
       </main>
       <PlayerLeftNotice />
+      <FriendsSidebar />
+      <GameInviteToast />
     </div>
   );
 }

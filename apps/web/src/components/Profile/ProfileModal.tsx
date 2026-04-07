@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useSocket } from '@/hooks/useSocket';
 import { getAvatarDataUri } from '@/utils/avatars';
 import { useTranslation } from '@/i18n';
+import { useAuthStore } from '@/stores/authStore';
+import { useFriendStore } from '@/stores/friendStore';
+import { friendsApi } from '@/utils/friendsApi';
 import type { PlayerProfile } from '@doodledraw/shared';
 
 interface ProfileModalProps {
@@ -15,6 +18,13 @@ export default function ProfileModal({ persistentId, onClose }: ProfileModalProp
   const { t } = useTranslation();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const myPersistentId = useAuthStore((s) => s.user?.persistentId);
+  const friends = useFriendStore((s) => s.friends);
+  const incomingRequests = useFriendStore((s) => s.incomingRequests);
+  const outgoingRequests = useFriendStore((s) => s.outgoingRequests);
+  const [requestSending, setRequestSending] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   useEffect(() => {
     if (!persistentId) return;
@@ -149,6 +159,27 @@ export default function ProfileModal({ persistentId, onClose }: ProfileModalProp
                 </div>
               )}
 
+              {/* Add Friend / Status */}
+              {isAuthenticated && persistentId !== myPersistentId && (
+                <FriendAction
+                  persistentId={persistentId!}
+                  friends={friends}
+                  incomingRequests={incomingRequests}
+                  outgoingRequests={outgoingRequests}
+                  requestSending={requestSending}
+                  requestSent={requestSent}
+                  onSendRequest={async () => {
+                    setRequestSending(true);
+                    try {
+                      await friendsApi.sendRequest(persistentId!);
+                      setRequestSent(true);
+                    } catch {}
+                    setRequestSending(false);
+                  }}
+                  t={t}
+                />
+              )}
+
               {/* Close */}
               <button
                 onClick={onClose}
@@ -161,6 +192,65 @@ export default function ProfileModal({ persistentId, onClose }: ProfileModalProp
         </motion.div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function FriendAction({
+  persistentId,
+  friends,
+  incomingRequests,
+  outgoingRequests,
+  requestSending,
+  requestSent,
+  onSendRequest,
+  t,
+}: {
+  persistentId: string;
+  friends: { persistentId: string }[];
+  incomingRequests: { from: { persistentId: string } }[];
+  outgoingRequests: { to: { persistentId: string } }[];
+  requestSending: boolean;
+  requestSent: boolean;
+  onSendRequest: () => void;
+  t: (key: string) => string;
+}) {
+  const isFriend = friends.some((f) => f.persistentId === persistentId);
+  const hasPendingIncoming = incomingRequests.some((r) => r.from.persistentId === persistentId);
+  const hasPendingOutgoing = outgoingRequests.some((r) => r.to.persistentId === persistentId);
+
+  if (isFriend) {
+    return (
+      <div className="w-full py-2.5 mb-2 text-center text-sm font-medium text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/20 rounded-button flex items-center justify-center gap-1.5">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        {t('friends.alreadyFriends')}
+      </div>
+    );
+  }
+
+  if (hasPendingIncoming || hasPendingOutgoing || requestSent) {
+    return (
+      <div className="w-full py-2.5 mb-2 text-center text-sm font-medium text-surface-500 bg-surface-50 dark:bg-surface-700/50 rounded-button">
+        {t('friends.pending')}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={onSendRequest}
+      disabled={requestSending}
+      className="w-full py-2.5 mb-2 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-button transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <line x1="19" x2="19" y1="8" y2="14" />
+        <line x1="22" x2="16" y1="11" y2="11" />
+      </svg>
+      {t('friends.addFriend')}
+    </button>
   );
 }
 

@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { Room, GameMode, Player, LobbyInfo } from '@doodledraw/shared';
 import { RoomService } from '../room.service';
 import { GameService } from '../game.service';
+import { RoomPersistenceService } from '../room-persistence.service';
 import { createBotPlayer, removeBotState, isBotId } from './bot-player';
 
 export interface PermanentLobbyConfig {
@@ -38,6 +39,7 @@ export class PermanentLobbiesService implements OnApplicationBootstrap {
     private readonly roomService: RoomService,
     @Inject(forwardRef(() => GameService))
     private readonly gameService: GameService,
+    private readonly persistence: RoomPersistenceService,
   ) {}
 
   setServer(server: Server): void {
@@ -386,5 +388,6 @@ export class PermanentLobbiesService implements OnApplicationBootstrap {
 
     this.roomService.rooms.delete(roomId);
     this.lobbyRoomIds.delete(roomId);
+    this.persistence.deleteRoom(roomId);
   }
 }

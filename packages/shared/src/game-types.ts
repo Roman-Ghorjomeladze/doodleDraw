@@ -227,3 +227,43 @@ export interface LobbyInfo {
   status: 'waiting' | 'in_progress';
   mode: GameMode;
 }
+
+// --- Friends system types ---
+
+export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface FriendInfo {
+  persistentId: string;
+  username: string;
+  nickname: string;
+  avatar: string;
+  isOnline: boolean;
+  currentRoomId: string | null;
+}
+
+export interface FriendRequest {
+  id: string;
+  from: FriendInfo;
+  to: FriendInfo;
+  status: FriendRequestStatus;
+  createdAt: number;
+}
+
+export interface GameInvite {
+  id: string;
+  fromPersistentId: string;
+  fromNickname: string;
+  fromAvatar: string;
+  roomId: string;
+  mode: GameMode;
+  timestamp: number;
+}
+
+export interface FriendSearchResult {
+  persistentId: string;
+  username: string;
+  nickname: string;
+  avatar: string;
+  isFriend: boolean;
+  hasPendingRequest: boolean;
+}

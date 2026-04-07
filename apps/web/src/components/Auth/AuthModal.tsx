@@ -192,11 +192,11 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
         <input
           type="text"
           value={username}
-          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.@+%-]/g, ''))}
           className="w-full px-3 py-2 rounded-button bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 focus:border-primary-500 focus:outline-none transition-colors text-sm"
-          placeholder="3-20 chars, letters/numbers/_"
+          placeholder="Username or email"
           autoComplete="username"
-          maxLength={20}
+          maxLength={100}
           required
         />
       </div>
