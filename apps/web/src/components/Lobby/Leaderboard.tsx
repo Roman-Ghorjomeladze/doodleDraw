@@ -1,29 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { useSocket } from '@/hooks/useSocket';
 import { useAuthStore } from '@/stores/authStore';
 import { useTranslation } from '@/i18n';
 import { getAvatarDataUri } from '@/utils/avatars';
+import { leaderboardApi, type LeaderboardType, type LeaderboardPagination } from '@/utils/leaderboardApi';
 import ProfileModal from '@/components/Profile/ProfileModal';
 import { COUNTRIES } from '@doodledraw/shared';
 import type { LeaderboardEntry } from '@doodledraw/shared';
 import CountrySelect from '@/components/UI/CountrySelect';
+import Pagination from '@/components/UI/Pagination';
 
-type LeaderboardType = 'allTime' | 'weekly' | 'country' | 'age';
+const PAGE_SIZE = 20;
 
 export default function Leaderboard() {
-  const { emit, on } = useSocket();
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuthStore();
   const [type, setType] = useState<LeaderboardType>('allTime');
   const [country, setCountry] = useState('');
+  const [page, setPage] = useState(1);
 
   const hasCountry = isAuthenticated && !!user?.country;
   const hasBirthYear = isAuthenticated && !!user?.birthYear;
   const userAge = hasBirthYear ? new Date().getFullYear() - user!.birthYear : null;
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
+  const [pagination, setPagination] = useState<LeaderboardPagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const abortRef = useRef<AbortController>(undefined);
+
+  // Reset to page 1 whenever the tab/filter changes.
+  useEffect(() => {
+    setPage(1);
+  }, [type, country]);
 
   // Auto-set country from profile when switching to country tab.
   useEffect(() => {
@@ -36,38 +44,53 @@ export default function Leaderboard() {
     // Don't fetch country leaderboard without a filter selected.
     if (type === 'country' && !country) {
       setPlayers([]);
+      setPagination(null);
       setLoading(false);
       return;
     }
     // Age tab uses exact age from profile — always available if user has birthYear.
     if (type === 'age' && !hasBirthYear) {
       setPlayers([]);
+      setPagination(null);
       setLoading(false);
       return;
     }
 
+    // Abort any in-flight request when the query changes.
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
 
-    const unsub = on('leaderboard:data', ({ players: data, type: responseType }) => {
-      if (responseType === type) {
-        setPlayers(data);
-        setLoading(false);
-      }
-    });
-
-    emit('leaderboard:get', {
-      type,
-      country: type === 'country' ? country : undefined,
-      ageGroup: type === 'age' && user?.birthYear ? String(user.birthYear) : undefined,
-    });
-
-    const timeout = setTimeout(() => setLoading(false), 5000);
+    leaderboardApi
+      .get({
+        type,
+        country: type === 'country' ? country : undefined,
+        ageGroup: type === 'age' && user?.birthYear ? String(user.birthYear) : undefined,
+        page,
+        limit: PAGE_SIZE,
+        signal: controller.signal,
+      })
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setPlayers(data.players);
+          setPagination(data.pagination);
+          setLoading(false);
+        }
+      })
+      .catch((err: any) => {
+        if (err.name !== 'AbortError') {
+          setPlayers([]);
+          setPagination(null);
+          setLoading(false);
+        }
+      });
 
     return () => {
-      unsub();
-      clearTimeout(timeout);
+      controller.abort();
     };
-  }, [type, country, user?.birthYear, hasBirthYear, emit, on]);
+  }, [type, country, user?.birthYear, hasBirthYear, page]);
 
   const getMedalOrRank = (rank: number) => {
     if (rank === 1) return '🥇';
@@ -190,6 +213,14 @@ export default function Leaderboard() {
             );
           })}
         </div>
+      )}
+
+      {pagination && pagination.totalPages > 1 && (
+        <Pagination
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={setPage}
+        />
       )}
 
       <ProfileModal persistentId={profileId} onClose={() => setProfileId(null)} />

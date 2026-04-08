@@ -9,7 +9,12 @@
     "build": "pnpm -r run build",
     "start:prod": "NODE_ENV=production node apps/server/dist/main.js",
     "db:migrate": "pnpm --filter @doodledraw/server run db:migrate",
-    "db:seed": "pnpm --filter @doodledraw/server run db:seed"
+    "db:seed": "pnpm --filter @doodledraw/server run db:seed",
+    "test": "pnpm -r run test",
+    "test:server": "pnpm --filter @doodledraw/server run test",
+    "test:web": "pnpm --filter @doodledraw/web run test",
+    "test:e2e": "npx playwright test",
+    "test:coverage": "pnpm -r run test:coverage"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -19,5 +24,8 @@
       "esbuild",
       "@nestjs/core"
     ]
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
   }
 }

@@ -116,7 +116,8 @@ export class FriendService {
     ]);
 
     if (!fromProfile?.username) throw new Error('You must be registered to send friend requests.');
-    if (!toProfile?.username) throw new Error('User not found.');
+    if (!toProfile) throw new Error('User not found.');
+    if (!toProfile.username) throw new Error('This player is not registered and cannot receive friend requests.');
 
     // Check if already friends.
     if (await this.areFriends(fromPersistentId, toPersistentId)) {

@@ -159,8 +159,8 @@ export default function ProfileModal({ persistentId, onClose }: ProfileModalProp
                 </div>
               )}
 
-              {/* Add Friend / Status */}
-              {isAuthenticated && persistentId !== myPersistentId && (
+              {/* Add Friend / Status — only for registered users, not self */}
+              {isAuthenticated && persistentId !== myPersistentId && profile.isRegistered && (
                 <FriendAction
                   persistentId={persistentId!}
                   friends={friends}

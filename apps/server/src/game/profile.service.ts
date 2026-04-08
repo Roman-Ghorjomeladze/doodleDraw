@@ -198,15 +198,17 @@ export class ProfileService {
       favoriteWord: doc.favoriteWord,
       country: doc.country,
       birthYear: doc.birthYear,
+      isRegistered: !!doc.username,
     };
   }
 
   async getLeaderboard(
     type: 'allTime' | 'weekly' | 'country' | 'age',
-    options?: { country?: string; ageGroup?: string },
+    options?: { country?: string; ageGroup?: string; offset?: number },
     limit = 50,
-  ): Promise<LeaderboardEntry[]> {
+  ): Promise<{ players: LeaderboardEntry[]; total: number }> {
     const currentWeekStart = this.getWeekStart();
+    const offset = Math.max(0, options?.offset ?? 0);
 
     let query: any;
     let sortField: string;
@@ -215,12 +217,12 @@ export class ProfileService {
       query = { lastWeekReset: currentWeekStart, weeklyGames: { $gt: 0 } };
       sortField = 'weeklyScore';
     } else if (type === 'country') {
-      if (!options?.country) return [];
+      if (!options?.country) return { players: [], total: 0 };
       query = { totalGames: { $gt: 0 }, country: options.country };
       sortField = 'eloRating';
     } else if (type === 'age') {
       const birthYear = parseInt(options?.ageGroup || '', 10);
-      if (!birthYear || isNaN(birthYear)) return [];
+      if (!birthYear || isNaN(birthYear)) return { players: [], total: 0 };
       query = { totalGames: { $gt: 0 }, birthYear };
       sortField = 'eloRating';
     } else {
@@ -230,15 +232,21 @@ export class ProfileService {
 
     // Exclude bot profiles from leaderboards.
     query.persistentId = { $not: /^bot-/ };
+    // Only registered users (anonymous players don't belong on public rankings).
+    query.username = { $exists: true, $ne: null };
 
-    const docs = await this.profileModel
-      .find(query)
-      .sort({ [sortField]: -1 })
-      .limit(limit)
-      .exec();
+    const [docs, total] = await Promise.all([
+      this.profileModel
+        .find(query)
+        .sort({ [sortField]: -1 })
+        .skip(offset)
+        .limit(limit)
+        .exec(),
+      this.profileModel.countDocuments(query).exec(),
+    ]);
 
-    return docs.map((doc, index) => ({
-      rank: index + 1,
+    const players = docs.map((doc, index) => ({
+      rank: offset + index + 1,
       persistentId: doc.persistentId,
       nickname: doc.nickname,
       avatar: doc.avatar,
@@ -248,6 +256,8 @@ export class ProfileService {
       totalGames: type === 'weekly' ? doc.weeklyGames : doc.totalGames,
       country: doc.country,
     }));
+
+    return { players, total };
   }
 
   /** ISO date string of this week's Monday 00:00 UTC. */

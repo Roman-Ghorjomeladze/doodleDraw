@@ -12,7 +12,6 @@ import type {
   OngoingGameInfo,
   RematchState,
   PlayerProfile,
-  LeaderboardEntry,
   LobbyInfo,
   FriendInfo,
   FriendRequest,
@@ -44,7 +43,6 @@ export interface ClientToServerEvents {
   'game:rematchVote': (data: { vote: 'accepted' | 'declined' }) => void;
   'reaction:send': (data: { emoji: string }) => void;
   'profile:get': (data: { persistentId: string }) => void;
-  'leaderboard:get': (data: { type: 'allTime' | 'weekly' | 'country' | 'age'; country?: string; ageGroup?: string }) => void;
   'canvas:snapshot': (data: { image: string }) => void;
   'lobbies:list': () => void;
   'lobbies:join': (data: { lobbyId: string; nickname: string; avatar: string; persistentId: string; language?: string }) => void;
@@ -122,7 +120,6 @@ export interface ServerToClientEvents {
   'game:rematchStart': () => void;
   'reaction:received': (data: { emoji: string; nickname: string; playerId: string }) => void;
   'profile:data': (data: { profile: PlayerProfile | null }) => void;
-  'leaderboard:data': (data: { players: LeaderboardEntry[]; type: string }) => void;
   'lobbies:state': (data: { lobbies: LobbyInfo[] }) => void;
   'player:activeGame': (data: { roomId: string | null }) => void;
 

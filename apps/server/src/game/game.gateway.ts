@@ -994,21 +994,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     client.emit('profile:data', { profile });
   }
 
-  @SubscribeMessage('leaderboard:get')
-  async handleLeaderboardGet(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { type: 'allTime' | 'weekly' | 'country' | 'age'; country?: string; ageGroup?: string },
-  ): Promise<void> {
-    if (this.throttle(client, 'leaderboard:get')) return;
-
-    const validTypes = ['allTime', 'weekly', 'country', 'age'] as const;
-    const type = validTypes.includes(data?.type as any) ? data.type : 'allTime';
-    const players = await this.profileService.getLeaderboard(type, {
-      country: data?.country,
-      ageGroup: data?.ageGroup,
-    });
-    client.emit('leaderboard:data', { players, type });
-  }
+  // Note: leaderboard:get socket event was replaced with GET /api/leaderboard HTTP endpoint.
 
   // ---------------------------------------------------------------------------
   // Reactions

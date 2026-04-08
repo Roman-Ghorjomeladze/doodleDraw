@@ -174,6 +174,8 @@ export interface PlayerProfile {
   favoriteWord: string | null;
   country?: string;
   birthYear?: number;
+  /** True if the profile belongs to a registered (authenticated) user. */
+  isRegistered: boolean;
 }
 
 export interface LeaderboardEntry {

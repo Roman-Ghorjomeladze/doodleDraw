@@ -16,10 +16,11 @@ import { PermanentLobbiesService } from './bot/permanent-lobbies.service';
 import { OnlineTrackerService } from './online-tracker.service';
 import { FriendService } from './friend.service';
 import { FriendsController } from './friends.controller';
+import { LeaderboardController } from './leaderboard.controller';
 
 @Module({
   imports: [WordsModule, AuthModule],
-  controllers: [FriendsController],
+  controllers: [FriendsController, LeaderboardController],
   providers: [
     RoomPersistenceService,
     ProfileService,
