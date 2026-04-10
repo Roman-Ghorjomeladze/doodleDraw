@@ -3,6 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Room, Player, RoomSettings, GamePhase, GameMode, Team, RematchStatus } from '@doodledraw/shared';
 import { RoomDoc, RoomDocument, PlayerDoc } from '../database/schemas/room.schema';
+import { GameHistoryDoc, GameHistoryDocument } from '../database/schemas/game-history.schema';
+import { buildHistoryInsertFromPersistedDoc } from './game-history.service';
 
 /** Maximum age (ms) for a room to be restored on startup. */
 const MAX_ROOM_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -13,6 +15,7 @@ export class RoomPersistenceService {
 
   constructor(
     @InjectModel(RoomDoc.name) private readonly roomModel: Model<RoomDocument>,
+    @InjectModel(GameHistoryDoc.name) private readonly gameHistoryModel: Model<GameHistoryDocument>,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -67,11 +70,27 @@ export class RoomPersistenceService {
   async loadActiveRooms(): Promise<Room[]> {
     const cutoff = new Date(Date.now() - MAX_ROOM_AGE_MS);
 
-    // Mark stale rooms as abandoned.
-    await this.roomModel.updateMany(
-      { status: 'active', updatedAt: { $lt: cutoff } },
-      { $set: { status: 'abandoned' } },
-    ).exec();
+    // 1. Fetch stale docs first so we can archive them to history before marking abandoned.
+    const staleDocs = await this.roomModel
+      .find({ status: 'active', updatedAt: { $lt: cutoff } })
+      .lean()
+      .exec();
+
+    if (staleDocs.length > 0) {
+      const rows = staleDocs.map((d) => buildHistoryInsertFromPersistedDoc(d, 'abandoned'));
+      try {
+        await this.gameHistoryModel.insertMany(rows, { ordered: false });
+        this.logger.log(`Archived ${rows.length} stale room(s) as abandoned on startup`);
+      } catch (err: any) {
+        this.logger.error(`Failed to archive stale rooms: ${err.message}`);
+      }
+
+      // 2. Mark stale rooms as abandoned.
+      await this.roomModel.updateMany(
+        { status: 'active', updatedAt: { $lt: cutoff } },
+        { $set: { status: 'abandoned' } },
+      ).exec();
+    }
 
     const docs = await this.roomModel
       .find({ status: 'active' })
@@ -84,7 +103,16 @@ export class RoomPersistenceService {
         rooms.push(this.toRoom(doc as any));
       } catch (err: any) {
         this.logger.error(`Failed to restore room ${doc._id}: ${err.message}`);
-        // Mark the broken room as abandoned.
+        // Archive the broken room before marking abandoned.
+        try {
+          await this.gameHistoryModel.create(
+            buildHistoryInsertFromPersistedDoc(doc, 'abandoned'),
+          );
+        } catch (archiveErr: any) {
+          this.logger.error(
+            `Also failed to archive broken room ${doc._id}: ${archiveErr.message}`,
+          );
+        }
         this.fireAndForget(
           this.roomModel.updateOne({ _id: doc._id }, { $set: { status: 'abandoned' } }).exec(),
           `markAbandoned(${doc._id})`,

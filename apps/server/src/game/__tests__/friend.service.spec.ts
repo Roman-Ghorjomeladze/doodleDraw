@@ -117,16 +117,53 @@ describe('FriendService', () => {
   // -----------------------------------------------------------------------
 
   describe('getFriendPersistentIds', () => {
-    it('should return an array of friend persistent IDs', async () => {
+    it('should return an array of friend persistent IDs (filtering out soft-deleted)', async () => {
       mockFriendshipModel.find.mockReturnValue({
         lean: jest.fn().mockResolvedValue([
           { userA: 'user-1', userB: 'user-2' },
           { userA: 'user-1', userB: 'user-3' },
         ]),
       });
+      mockProfileModel.find.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([
+            { persistentId: 'user-2' },
+            { persistentId: 'user-3' },
+          ]),
+        }),
+      });
 
       const ids = await service.getFriendPersistentIds('user-1');
       expect(ids).toEqual(['user-2', 'user-3']);
+      expect(mockProfileModel.find).toHaveBeenCalledWith({
+        persistentId: { $in: ['user-2', 'user-3'] },
+        deletedAt: null,
+      });
+    });
+
+    it('returns an empty array when there are no friendships', async () => {
+      mockFriendshipModel.find.mockReturnValue({ lean: jest.fn().mockResolvedValue([]) });
+      const ids = await service.getFriendPersistentIds('user-1');
+      expect(ids).toEqual([]);
+      expect(mockProfileModel.find).not.toHaveBeenCalled();
+    });
+
+    it('excludes soft-deleted friends from the returned list', async () => {
+      mockFriendshipModel.find.mockReturnValue({
+        lean: jest.fn().mockResolvedValue([
+          { userA: 'user-1', userB: 'user-2' },
+          { userA: 'user-1', userB: 'user-3' },
+        ]),
+      });
+      // user-3 was soft-deleted → Mongo query filters it out and only returns user-2.
+      mockProfileModel.find.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([{ persistentId: 'user-2' }]),
+        }),
+      });
+
+      const ids = await service.getFriendPersistentIds('user-1');
+      expect(ids).toEqual(['user-2']);
     });
   });
 

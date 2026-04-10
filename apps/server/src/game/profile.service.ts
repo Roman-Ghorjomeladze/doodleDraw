@@ -182,7 +182,9 @@ export class ProfileService {
   }
 
   async getProfile(persistentId: string): Promise<PlayerProfile | null> {
-    const doc = await this.profileModel.findOne({ persistentId }).exec();
+    // Treat soft-deleted accounts as non-existent so their stats disappear
+    // from the public profile endpoint.
+    const doc = await this.profileModel.findOne({ persistentId, deletedAt: null }).exec();
     if (!doc) return null;
 
     return {
@@ -234,6 +236,8 @@ export class ProfileService {
     query.persistentId = { $not: /^bot-/ };
     // Only registered users (anonymous players don't belong on public rankings).
     query.username = { $exists: true, $ne: null };
+    // Hide soft-deleted accounts from leaderboards.
+    query.deletedAt = null;
 
     const [docs, total] = await Promise.all([
       this.profileModel

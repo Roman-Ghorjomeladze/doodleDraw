@@ -295,4 +295,20 @@ export const en = {
 	'friends.noOnlineFriends': 'No friends online',
 	'friends.searchMinChars': 'Type at least 2 characters',
 	'friends.searchToSeeMore': 'Search to see more friends',
+
+	// Feedback / bug report
+	'feedback.title': 'Send feedback',
+	'feedback.category': 'Category',
+	'feedback.category.bug': 'Bug',
+	'feedback.category.feedback': 'Feedback',
+	'feedback.category.other': 'Other',
+	'feedback.message': 'Message',
+	'feedback.placeholder': 'Describe the issue or share your thoughts...',
+	'feedback.submit': 'Send feedback',
+	'feedback.submitting': 'Sending...',
+	'feedback.successTitle': 'Thanks!',
+	'feedback.successBody': 'Your feedback has been sent.',
+	'feedback.close': 'Close',
+	'feedback.buttonLabel': 'Report a bug or send feedback',
+	'feedback.errorGeneric': 'Failed to submit feedback',
 } as const;

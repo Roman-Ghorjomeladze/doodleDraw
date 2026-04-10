@@ -218,6 +218,7 @@ export interface AuthUser {
   country: string;
   birthYear: number;
   persistentId: string;
+  isAdmin: boolean;
 }
 
 export interface LobbyInfo {

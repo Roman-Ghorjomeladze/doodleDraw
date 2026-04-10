@@ -10,6 +10,8 @@ import { ProfileDoc, ProfileDocSchema } from './schemas/profile.schema';
 import { AuthTokenDoc, AuthTokenDocSchema } from './schemas/auth-token.schema';
 import { FriendshipDoc, FriendshipDocSchema } from './schemas/friendship.schema';
 import { FriendRequestDoc, FriendRequestDocSchema } from './schemas/friend-request.schema';
+import { GameHistoryDoc, GameHistoryDocSchema } from './schemas/game-history.schema';
+import { FeedbackDoc, FeedbackDocSchema } from './schemas/feedback.schema';
 
 @Global()
 @Module({
@@ -29,6 +31,8 @@ import { FriendRequestDoc, FriendRequestDocSchema } from './schemas/friend-reque
       { name: AuthTokenDoc.name, schema: AuthTokenDocSchema },
       { name: FriendshipDoc.name, schema: FriendshipDocSchema },
       { name: FriendRequestDoc.name, schema: FriendRequestDocSchema },
+      { name: GameHistoryDoc.name, schema: GameHistoryDocSchema },
+      { name: FeedbackDoc.name, schema: FeedbackDocSchema },
     ]),
   ],
   exports: [MongooseModule],

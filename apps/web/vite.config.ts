@@ -6,7 +6,7 @@ import path from 'path';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    port: 5173,
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
     host: true,
     proxy: {
       '/socket.io': {

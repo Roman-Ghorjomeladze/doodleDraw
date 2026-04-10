@@ -114,6 +114,12 @@ export class AuthService {
       throw new Error('Invalid username or password');
     }
 
+    // Soft-deleted users must not be able to sign in. Return the same
+    // generic error to avoid leaking account status to an attacker.
+    if (profile.deletedAt) {
+      throw new Error('Invalid username or password');
+    }
+
     const valid = await bcrypt.compare(data.password, profile.passwordHash);
     if (!valid) {
       throw new Error('Invalid username or password');
@@ -144,12 +150,21 @@ export class AuthService {
       return null;
     }
 
+    // Reject tokens belonging to soft-deleted profiles so a deleted user
+    // with a still-valid token can't continue calling authenticated APIs.
+    const profile = await this.profileModel
+      .findOne({ persistentId: doc.persistentId })
+      .select({ deletedAt: 1 })
+      .lean()
+      .exec();
+    if (profile?.deletedAt) return null;
+
     return doc.persistentId;
   }
 
   async getAuthUser(persistentId: string): Promise<AuthUser | null> {
     const profile = await this.profileModel.findOne({ persistentId }).exec();
-    if (!profile || !profile.username) return null;
+    if (!profile || !profile.username || profile.deletedAt) return null;
     return this.toAuthUser(profile);
   }
 
@@ -183,6 +198,65 @@ export class AuthService {
 
   async logout(token: string): Promise<void> {
     await this.tokenModel.deleteOne({ token }).exec();
+  }
+
+  /**
+   * Admin action: overwrite a registered user's password. Invalidates all
+   * active tokens so the user must sign in again with the new credentials.
+   */
+  async resetUserPassword(persistentId: string, newPassword: string): Promise<void> {
+    if (!newPassword || newPassword.length < 6 || newPassword.length > 100) {
+      throw new Error('Password must be 6-100 characters');
+    }
+    const profile = await this.profileModel.findOne({ persistentId }).exec();
+    if (!profile) {
+      throw new Error('User not found');
+    }
+    if (!profile.username) {
+      throw new Error('Cannot reset password for an anonymous (unregistered) profile');
+    }
+    profile.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await profile.save();
+    // Invalidate all active sessions for this user.
+    await this.tokenModel.deleteMany({ persistentId }).exec();
+  }
+
+  /**
+   * Admin action: soft-delete a user. Sets `deletedAt` on the profile and
+   * invalidates all active tokens. The profile, friendships, friend
+   * requests, and game history are preserved so the account can be
+   * restored later via `undeleteUserAccount`.
+   *
+   * Returns `true` if the user was marked as deleted, `false` if the
+   * profile didn't exist.
+   */
+  async deleteUserAccount(persistentId: string): Promise<boolean> {
+    const result = await this.profileModel
+      .updateOne(
+        { persistentId, deletedAt: null },
+        { $set: { deletedAt: new Date() } },
+      )
+      .exec();
+    if (result.matchedCount === 0) return false;
+    // Invalidate active sessions so the deleted user is immediately
+    // signed out from any tab they have open.
+    await this.tokenModel.deleteMany({ persistentId }).exec();
+    return true;
+  }
+
+  /**
+   * Admin action: restore a previously soft-deleted user by clearing the
+   * `deletedAt` field. Returns `true` if a doc was updated, `false` if no
+   * matching deleted profile was found.
+   */
+  async undeleteUserAccount(persistentId: string): Promise<boolean> {
+    const result = await this.profileModel
+      .updateOne(
+        { persistentId, deletedAt: { $ne: null } },
+        { $set: { deletedAt: null } },
+      )
+      .exec();
+    return result.matchedCount > 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -267,6 +341,7 @@ export class AuthService {
       country: profile.country || '',
       birthYear: profile.birthYear || 0,
       persistentId: profile.persistentId,
+      isAdmin: profile.isAdmin ?? false,
     };
   }
 }

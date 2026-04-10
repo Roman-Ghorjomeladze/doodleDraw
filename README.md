@@ -82,10 +82,21 @@ NODE_ENV=development
 PORT=3001
 CORS_ORIGIN=http://localhost:5173
 MONGODB_URI=mongodb://localhost:27017/doodledraw
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your_password
 ANTHROPIC_API_KEY=sk-...   # For bot vision features
 ```
+
+### Granting admin access
+
+Admins are regular registered users with `isAdmin: true` set on their profile. To grant yourself admin access after registering, run this in the Mongo shell:
+
+```js
+db.playerProfiles.updateOne(
+  { username: 'your_username' },
+  { $set: { isAdmin: true } }
+)
+```
+
+After refreshing the app, a shield icon will appear in the header and clicking it opens the admin panel.
 
 ### 3. Start MongoDB
 

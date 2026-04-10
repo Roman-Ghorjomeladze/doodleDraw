@@ -6,6 +6,7 @@ import { TeamModeService } from '../team-mode.service';
 import { WordsService } from '../../words/words.service';
 import { RoomPersistenceService } from '../room-persistence.service';
 import { ProfileService } from '../profile.service';
+import { GameHistoryService } from '../game-history.service';
 import { BotDrawingService } from '../bot/bot-drawing.service';
 import { PermanentLobbiesService } from '../bot/permanent-lobbies.service';
 import type { Player, Room } from '@doodledraw/shared';
@@ -19,6 +20,7 @@ describe('GameService', () => {
   let mockWordsService: any;
   let mockPersistence: any;
   let mockProfileService: any;
+  let mockGameHistoryService: any;
   let mockBotDrawing: any;
   let mockPermanentLobbies: any;
 
@@ -136,6 +138,12 @@ describe('GameService', () => {
     mockProfileService = {
       updateProfilesAfterGame: jest.fn().mockResolvedValue(undefined),
     };
+    mockGameHistoryService = {
+      archiveGame: jest.fn().mockResolvedValue(undefined),
+      getGames: jest.fn(),
+      getGameById: jest.fn(),
+      getGlobalStats: jest.fn(),
+    };
     mockBotDrawing = {
       startDrawing: jest.fn(),
       cancelDrawing: jest.fn(),
@@ -153,6 +161,7 @@ describe('GameService', () => {
         { provide: WordsService, useValue: mockWordsService },
         { provide: RoomPersistenceService, useValue: mockPersistence },
         { provide: ProfileService, useValue: mockProfileService },
+        { provide: GameHistoryService, useValue: mockGameHistoryService },
         { provide: BotDrawingService, useValue: mockBotDrawing },
         { provide: PermanentLobbiesService, useValue: mockPermanentLobbies },
       ],

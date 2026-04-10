@@ -6,6 +6,7 @@
       "runtimeExecutable": "/Users/roma/.nvm/versions/node/v24.11.1/bin/pnpm",
       "runtimeArgs": ["dev:server"],
       "port": 3001,
+      "autoPort": false,
       "env": { "PATH": "/Users/roma/.nvm/versions/node/v24.11.1/bin:/usr/local/bin:/usr/bin:/bin" }
     },
     {

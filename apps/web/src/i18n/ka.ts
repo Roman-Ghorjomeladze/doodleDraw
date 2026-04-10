@@ -298,4 +298,20 @@ export const ka: Translations = {
 	'friends.noOnlineFriends': 'ონლაინ მეგობრები არ არიან',
 	'friends.searchMinChars': 'შეიყვანეთ მინიმუმ 2 სიმბოლო',
 	'friends.searchToSeeMore': 'მოძებნეთ მეტი მეგობრების სანახავად',
+
+	// Feedback / bug report
+	'feedback.title': 'უკუკავშირის გაგზავნა',
+	'feedback.category': 'კატეგორია',
+	'feedback.category.bug': 'შეცდომა',
+	'feedback.category.feedback': 'უკუკავშირი',
+	'feedback.category.other': 'სხვა',
+	'feedback.message': 'შეტყობინება',
+	'feedback.placeholder': 'აღწერეთ პრობლემა ან გაუზიარეთ აზრები...',
+	'feedback.submit': 'გაგზავნა',
+	'feedback.submitting': 'იგზავნება...',
+	'feedback.successTitle': 'მადლობა!',
+	'feedback.successBody': 'თქვენი უკუკავშირი გაიგზავნა.',
+	'feedback.close': 'დახურვა',
+	'feedback.buttonLabel': 'შეცდომის ან უკუკავშირის გაგზავნა',
+	'feedback.errorGeneric': 'უკუკავშირის გაგზავნა ვერ მოხერხდა',
 };

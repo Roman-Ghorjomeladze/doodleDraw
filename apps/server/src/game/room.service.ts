@@ -17,6 +17,7 @@ import {
   TEAM_NAME_PAIRS,
 } from '@doodledraw/shared';
 import { RoomPersistenceService } from './room-persistence.service';
+import { GameHistoryService } from './game-history.service';
 
 const ROOM_CLEANUP_DELAY_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -39,7 +40,10 @@ export class RoomService implements OnModuleInit {
   /** Pending cleanup timeouts per room id. */
   private readonly cleanupTimers: Map<string, NodeJS.Timeout> = new Map();
 
-  constructor(private readonly persistence: RoomPersistenceService) {}
+  constructor(
+    private readonly persistence: RoomPersistenceService,
+    private readonly gameHistoryService: GameHistoryService,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     try {
@@ -270,6 +274,8 @@ export class RoomService implements OnModuleInit {
     // If room is now empty or only bots remain, delete it — unless it's a permanent lobby.
     if ((room.players.size === 0 || !hasHumanPlayers) && !room.isPermanentLobby) {
       this.cancelCleanup(roomId);
+      // Archive to game history before deleting (fire-and-forget, deduped).
+      this.gameHistoryService.archiveGame(room, 'cleaned_up').catch(() => {});
       // Clean up bot mappings too.
       for (const [, p] of room.players) {
         this.playerRoomMap.delete(p.id);
@@ -625,6 +631,8 @@ export class RoomService implements OnModuleInit {
 
       const anyHumanConnected = Array.from(room.players.values()).some((p) => p.isConnected && !p.isBot);
       if (!anyHumanConnected && !room.isPermanentLobby) {
+        // Archive to game history before deleting (fire-and-forget, deduped).
+        this.gameHistoryService.archiveGame(room, 'cleaned_up').catch(() => {});
         this.rooms.delete(roomId);
         this.persistence.deleteRoom(roomId);
         // Clean up player-room mappings for remaining entries.

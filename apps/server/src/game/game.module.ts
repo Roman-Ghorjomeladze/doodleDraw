@@ -17,6 +17,7 @@ import { OnlineTrackerService } from './online-tracker.service';
 import { FriendService } from './friend.service';
 import { FriendsController } from './friends.controller';
 import { LeaderboardController } from './leaderboard.controller';
+import { GameHistoryService } from './game-history.service';
 
 @Module({
   imports: [WordsModule, AuthModule],
@@ -26,6 +27,7 @@ import { LeaderboardController } from './leaderboard.controller';
     ProfileService,
     OnlineTrackerService,
     FriendService,
+    GameHistoryService,
     RoomService,
     ClassicModeService,
     TeamModeService,
@@ -37,6 +39,13 @@ import { LeaderboardController } from './leaderboard.controller';
     GameService,
     GameGateway,
   ],
-  exports: [RoomService, GameService, GameGateway, ProfileService, PermanentLobbiesService],
+  exports: [
+    RoomService,
+    GameService,
+    GameGateway,
+    ProfileService,
+    PermanentLobbiesService,
+    GameHistoryService,
+  ],
 })
 export class GameModule {}

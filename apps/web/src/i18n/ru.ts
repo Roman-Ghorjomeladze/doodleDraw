@@ -289,4 +289,20 @@ export const ru: Translations = {
   'friends.noOnlineFriends': 'Нет друзей онлайн',
   'friends.searchMinChars': 'Введите минимум 2 символа',
   'friends.searchToSeeMore': 'Поищите, чтобы увидеть больше друзей',
+
+  // Feedback / bug report
+  'feedback.title': 'Отправить отзыв',
+  'feedback.category': 'Категория',
+  'feedback.category.bug': 'Ошибка',
+  'feedback.category.feedback': 'Отзыв',
+  'feedback.category.other': 'Другое',
+  'feedback.message': 'Сообщение',
+  'feedback.placeholder': 'Опишите проблему или поделитесь мыслями...',
+  'feedback.submit': 'Отправить',
+  'feedback.submitting': 'Отправка...',
+  'feedback.successTitle': 'Спасибо!',
+  'feedback.successBody': 'Ваш отзыв отправлен.',
+  'feedback.close': 'Закрыть',
+  'feedback.buttonLabel': 'Сообщить об ошибке или оставить отзыв',
+  'feedback.errorGeneric': 'Не удалось отправить отзыв',
 };

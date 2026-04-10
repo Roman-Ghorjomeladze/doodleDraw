@@ -31,6 +31,9 @@ describe('AuthService', () => {
   mockTokenModel.findOne = jest.fn();
   mockTokenModel.create = jest.fn();
   mockTokenModel.deleteOne = jest.fn();
+  mockTokenModel.deleteMany = jest.fn();
+  mockProfileModel.deleteOne = jest.fn();
+  mockProfileModel.updateOne = jest.fn();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -283,13 +286,37 @@ describe('AuthService', () => {
         /Password is required/,
       );
     });
+
+    it('rejects soft-deleted users with the generic invalid credentials error', async () => {
+      mockProfileModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          persistentId: 'pid-1',
+          username: 'alice',
+          passwordHash: 'hashed',
+          deletedAt: new Date(),
+        }),
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await expect(
+        service.login({ username: 'alice', password: 'password123' } as any),
+      ).rejects.toThrow(/Invalid username or password/);
+    });
   });
 
   // ---------------------------------------------------------------------------
   // validateToken
   // ---------------------------------------------------------------------------
   describe('validateToken', () => {
-    it('returns persistentId for a valid token', async () => {
+    /** Helper: returns a chainable mock for profileModel.findOne().select().lean().exec(). */
+    function mockProfileFindOneSelectLean(result: any) {
+      const exec = jest.fn().mockResolvedValue(result);
+      const lean = jest.fn().mockReturnValue({ exec });
+      const select = jest.fn().mockReturnValue({ lean });
+      mockProfileModel.findOne.mockReturnValue({ select });
+    }
+
+    it('returns persistentId for a valid token belonging to an active user', async () => {
       const futureDate = new Date(Date.now() + 1000 * 60 * 60);
       mockTokenModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue({
@@ -298,6 +325,7 @@ describe('AuthService', () => {
           expiresAt: futureDate,
         }),
       });
+      mockProfileFindOneSelectLean({ deletedAt: null });
 
       const result = await service.validateToken('tok');
       expect(result).toBe('pid-1');
@@ -330,6 +358,21 @@ describe('AuthService', () => {
       expect(result).toBeNull();
       expect(deleteOne).toHaveBeenCalled();
     });
+
+    it('returns null when the owning profile is soft-deleted', async () => {
+      const futureDate = new Date(Date.now() + 1000 * 60 * 60);
+      mockTokenModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          token: 'tok',
+          persistentId: 'pid-1',
+          expiresAt: futureDate,
+        }),
+      });
+      mockProfileFindOneSelectLean({ deletedAt: new Date() });
+
+      const result = await service.validateToken('tok');
+      expect(result).toBeNull();
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -356,7 +399,25 @@ describe('AuthService', () => {
         country: 'US',
         birthYear: 1990,
         persistentId: 'pid-1',
+        isAdmin: false,
       });
+    });
+
+    it('returns isAdmin: true when the profile has isAdmin flag set', async () => {
+      mockProfileModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          persistentId: 'pid-2',
+          username: 'admin',
+          nickname: 'Admin',
+          avatar: 'av',
+          country: 'US',
+          birthYear: 1990,
+          isAdmin: true,
+        }),
+      });
+
+      const result = await service.getAuthUser('pid-2');
+      expect(result?.isAdmin).toBe(true);
     });
 
     it('returns null when profile not found', async () => {
@@ -370,6 +431,20 @@ describe('AuthService', () => {
         exec: jest.fn().mockResolvedValue({ persistentId: 'p' }),
       });
       const result = await service.getAuthUser('p');
+      expect(result).toBeNull();
+    });
+
+    it('returns null when the profile is soft-deleted', async () => {
+      mockProfileModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          persistentId: 'pid-1',
+          username: 'alice',
+          nickname: 'Alice',
+          avatar: '',
+          deletedAt: new Date(),
+        }),
+      });
+      const result = await service.getAuthUser('pid-1');
       expect(result).toBeNull();
     });
   });
@@ -452,6 +527,128 @@ describe('AuthService', () => {
       await service.logout('tok');
       expect(mockTokenModel.deleteOne).toHaveBeenCalledWith({ token: 'tok' });
       expect(exec).toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // resetUserPassword (admin action)
+  // ---------------------------------------------------------------------------
+  describe('resetUserPassword', () => {
+    function mockFindProfile(profile: any) {
+      mockProfileModel.findOne.mockReturnValue({ exec: jest.fn().mockResolvedValue(profile) });
+    }
+
+    beforeEach(() => {
+      mockTokenModel.deleteMany.mockReturnValue({ exec: jest.fn().mockResolvedValue({}) });
+    });
+
+    it('updates the password hash and invalidates all tokens', async () => {
+      const profile: any = {
+        persistentId: 'pid-1',
+        username: 'alice',
+        passwordHash: 'old-hash',
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      mockFindProfile(profile);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hash');
+
+      await service.resetUserPassword('pid-1', 'NewPass99');
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('NewPass99', 10);
+      expect(profile.passwordHash).toBe('new-hash');
+      expect(profile.save).toHaveBeenCalled();
+      expect(mockTokenModel.deleteMany).toHaveBeenCalledWith({ persistentId: 'pid-1' });
+    });
+
+    it('throws when the password is too short', async () => {
+      await expect(service.resetUserPassword('pid-1', 'abc')).rejects.toThrow(
+        'Password must be 6-100 characters',
+      );
+    });
+
+    it('throws when the password is too long', async () => {
+      await expect(service.resetUserPassword('pid-1', 'x'.repeat(101))).rejects.toThrow(
+        'Password must be 6-100 characters',
+      );
+    });
+
+    it('throws when the profile is not found', async () => {
+      mockFindProfile(null);
+      await expect(service.resetUserPassword('missing', 'Good1234')).rejects.toThrow(
+        'User not found',
+      );
+    });
+
+    it('throws when the profile is anonymous (no username)', async () => {
+      mockFindProfile({
+        persistentId: 'pid-1',
+        passwordHash: undefined,
+        save: jest.fn(),
+      });
+      await expect(service.resetUserPassword('pid-1', 'Good1234')).rejects.toThrow(
+        'Cannot reset password for an anonymous (unregistered) profile',
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // deleteUserAccount (admin action — soft delete)
+  // ---------------------------------------------------------------------------
+  describe('deleteUserAccount', () => {
+    it('soft-deletes the profile by setting deletedAt and invalidates tokens', async () => {
+      const profileExec = jest.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+      const tokenExec = jest.fn().mockResolvedValue({ deletedCount: 3 });
+      mockProfileModel.updateOne.mockReturnValue({ exec: profileExec });
+      mockTokenModel.deleteMany.mockReturnValue({ exec: tokenExec });
+
+      const ok = await service.deleteUserAccount('pid-1');
+
+      expect(ok).toBe(true);
+      expect(mockProfileModel.updateOne).toHaveBeenCalledWith(
+        { persistentId: 'pid-1', deletedAt: null },
+        { $set: { deletedAt: expect.any(Date) } },
+      );
+      expect(mockTokenModel.deleteMany).toHaveBeenCalledWith({ persistentId: 'pid-1' });
+      expect(profileExec).toHaveBeenCalled();
+      expect(tokenExec).toHaveBeenCalled();
+    });
+
+    it('returns false when no active profile is matched (already deleted or missing)', async () => {
+      mockProfileModel.updateOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ matchedCount: 0, modifiedCount: 0 }),
+      });
+
+      const ok = await service.deleteUserAccount('ghost');
+      expect(ok).toBe(false);
+      // Tokens must NOT be cleared when nothing was deleted.
+      expect(mockTokenModel.deleteMany).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // undeleteUserAccount (admin action — restore)
+  // ---------------------------------------------------------------------------
+  describe('undeleteUserAccount', () => {
+    it('clears the deletedAt field and returns true on match', async () => {
+      mockProfileModel.updateOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
+      });
+
+      const ok = await service.undeleteUserAccount('pid-1');
+      expect(ok).toBe(true);
+      expect(mockProfileModel.updateOne).toHaveBeenCalledWith(
+        { persistentId: 'pid-1', deletedAt: { $ne: null } },
+        { $set: { deletedAt: null } },
+      );
+    });
+
+    it('returns false when no matching deleted profile exists', async () => {
+      mockProfileModel.updateOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ matchedCount: 0, modifiedCount: 0 }),
+      });
+
+      const ok = await service.undeleteUserAccount('pid-1');
+      expect(ok).toBe(false);
     });
   });
 });

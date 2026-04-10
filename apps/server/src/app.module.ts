@@ -8,6 +8,7 @@ import { WordsModule } from './words/words.module';
 import { GameModule } from './game/game.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const imports: any[] = [
@@ -18,6 +19,7 @@ const imports: any[] = [
   GameModule,
   AdminModule,
   AuthModule,
+  FeedbackModule,
 ];
 
 // In production, serve the built React app as static files

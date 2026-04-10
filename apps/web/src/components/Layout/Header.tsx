@@ -9,10 +9,12 @@ import SettingsPanel from './SettingsPanel';
 import AnimatedLogo from '@/components/UI/AnimatedLogo';
 import ConfirmModal from '@/components/UI/ConfirmModal';
 import RulesModal from '@/components/RulesModal';
+import FeedbackButton from '@/components/Feedback/FeedbackButton';
 
 export default function Header() {
   const { roomId, phase } = useGameStore();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isAdminUser = useAuthStore((s) => s.user?.isAdmin ?? false);
   const incomingRequests = useFriendStore((s) => s.incomingRequests);
   const gameInvites = useFriendStore((s) => s.gameInvites);
   const { leaveRoom } = useGame();
@@ -62,6 +64,21 @@ export default function Header() {
                   <circle cx="12" cy="12" r="10" />
                   <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                   <path d="M12 17h.01" />
+                </svg>
+              </button>
+            )}
+            {/* Bug / feedback button — always visible */}
+            <FeedbackButton />
+            {/* Admin shortcut — only visible for admins */}
+            {isAdminUser && (
+              <button
+                onClick={() => { window.location.hash = 'admin'; }}
+                className="p-2 rounded-button hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-primary-600 dark:text-primary-400"
+                aria-label="Admin panel"
+                title="Admin panel"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
                 </svg>
               </button>
             )}

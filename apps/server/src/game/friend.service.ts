@@ -47,8 +47,10 @@ export class FriendService {
 
     if (friendIds.length === 0) return [];
 
+    // Skip soft-deleted accounts so they don't appear in the friends list.
     const profiles = await this.profileModel.find({
       persistentId: { $in: friendIds },
+      deletedAt: null,
     }).lean();
 
     return profiles.map(p => this.toFriendInfo(p as ProfileDoc));
@@ -59,9 +61,20 @@ export class FriendService {
       $or: [{ userA: persistentId }, { userB: persistentId }],
     }).lean();
 
-    return friendships.map(f =>
+    const friendIds = friendships.map(f =>
       f.userA === persistentId ? f.userB : f.userA,
     );
+
+    if (friendIds.length === 0) return [];
+
+    // Filter out soft-deleted friends so downstream features (invites, online
+    // counts, etc.) don't target accounts that an admin has marked deleted.
+    const activeProfiles = await this.profileModel
+      .find({ persistentId: { $in: friendIds }, deletedAt: null })
+      .select({ persistentId: 1 })
+      .lean();
+
+    return activeProfiles.map(p => p.persistentId);
   }
 
   async areFriends(a: string, b: string): Promise<boolean> {
@@ -75,6 +88,7 @@ export class FriendService {
     const profiles = await this.profileModel.find({
       username: { $regex: new RegExp(`^${escaped}`, 'i') },
       persistentId: { $ne: requesterPersistentId },
+      deletedAt: null,
     }).limit(10).lean();
 
     const results: FriendSearchResult[] = [];
@@ -109,15 +123,17 @@ export class FriendService {
       throw new Error('Cannot send a friend request to yourself.');
     }
 
-    // Verify both users are registered.
+    // Verify both users are registered and not soft-deleted.
     const [fromProfile, toProfile] = await Promise.all([
       this.profileModel.findOne({ persistentId: fromPersistentId }).lean(),
       this.profileModel.findOne({ persistentId: toPersistentId }).lean(),
     ]);
 
     if (!fromProfile?.username) throw new Error('You must be registered to send friend requests.');
+    if (fromProfile.deletedAt) throw new Error('Your account is not available.');
     if (!toProfile) throw new Error('User not found.');
     if (!toProfile.username) throw new Error('This player is not registered and cannot receive friend requests.');
+    if (toProfile.deletedAt) throw new Error('User not found.');
 
     // Check if already friends.
     if (await this.areFriends(fromPersistentId, toPersistentId)) {
@@ -210,6 +226,7 @@ export class FriendService {
 
     const profiles = await this.profileModel.find({
       persistentId: { $in: [...allIds] },
+      deletedAt: null,
     }).lean();
 
     const profileMap = new Map(profiles.map(p => [p.persistentId, p]));
@@ -217,6 +234,7 @@ export class FriendService {
     const hydrate = (doc: any): FriendRequest | null => {
       const fromProfile = profileMap.get(doc.fromPersistentId);
       const toProfile = profileMap.get(doc.toPersistentId);
+      // Drop requests where either side has been soft-deleted.
       if (!fromProfile || !toProfile) return null;
       return {
         id: doc._id.toString(),

@@ -289,4 +289,20 @@ export const tr: Translations = {
   'friends.noOnlineFriends': 'Çevrimiçi arkadaş yok',
   'friends.searchMinChars': 'En az 2 karakter yazın',
   'friends.searchToSeeMore': 'Daha fazla arkadaş görmek için arayın',
+
+  // Feedback / bug report
+  'feedback.title': 'Geri bildirim gönder',
+  'feedback.category': 'Kategori',
+  'feedback.category.bug': 'Hata',
+  'feedback.category.feedback': 'Geri bildirim',
+  'feedback.category.other': 'Diğer',
+  'feedback.message': 'Mesaj',
+  'feedback.placeholder': 'Sorunu açıklayın veya düşüncelerinizi paylaşın...',
+  'feedback.submit': 'Gönder',
+  'feedback.submitting': 'Gönderiliyor...',
+  'feedback.successTitle': 'Teşekkürler!',
+  'feedback.successBody': 'Geri bildiriminiz gönderildi.',
+  'feedback.close': 'Kapat',
+  'feedback.buttonLabel': 'Hata bildir veya geri bildirim gönder',
+  'feedback.errorGeneric': 'Geri bildirim gönderilemedi',
 };

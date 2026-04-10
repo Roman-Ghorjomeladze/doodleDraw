@@ -11,8 +11,7 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3001,
         CORS_ORIGIN: 'https://doodledraw.games',
-        ADMIN_USERNAME: 'admin',
-        ADMIN_PASSWORD: 'changeme',
+        // Admin access: toggle `isAdmin: true` on a registered user via Mongo shell.
       },
     },
   ],

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoomService } from '../room.service';
 import { RoomPersistenceService } from '../room-persistence.service';
+import { GameHistoryService } from '../game-history.service';
 import type { Player } from '@doodledraw/shared';
 
 describe('RoomService', () => {
@@ -13,6 +14,13 @@ describe('RoomService', () => {
     loadActiveRooms: jest.fn().mockResolvedValue([]),
   };
 
+  const mockGameHistoryService = {
+    archiveGame: jest.fn().mockResolvedValue(undefined),
+    getGames: jest.fn(),
+    getGameById: jest.fn(),
+    getGlobalStats: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -20,6 +28,7 @@ describe('RoomService', () => {
       providers: [
         RoomService,
         { provide: RoomPersistenceService, useValue: mockPersistence },
+        { provide: GameHistoryService, useValue: mockGameHistoryService },
       ],
     }).compile();
 

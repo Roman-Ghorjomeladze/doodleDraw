@@ -17,6 +17,7 @@ import { TeamModeService } from './team-mode.service';
 import { WordsService } from '../words/words.service';
 import { RoomPersistenceService } from './room-persistence.service';
 import { ProfileService } from './profile.service';
+import { GameHistoryService } from './game-history.service';
 import { generateHint, revealLetter } from './utils/hints';
 import { levenshteinDistance } from './utils/levenshtein';
 import { calculateGuessScore, calculateDrawerScore } from './utils/scoring';
@@ -51,6 +52,7 @@ export class GameService {
     private readonly wordsService: WordsService,
     private readonly persistence: RoomPersistenceService,
     private readonly profileService: ProfileService,
+    private readonly gameHistoryService: GameHistoryService,
     @Inject(forwardRef(() => BotDrawingService))
     private readonly botDrawing: BotDrawingService,
     @Inject(forwardRef(() => PermanentLobbiesService))
@@ -741,6 +743,11 @@ export class GameService {
 
     // Update player profiles (fire-and-forget, skip bots).
     this.profileService.updateProfilesAfterGame(room, finalScores, winner);
+
+    // Archive the completed game to permanent history (fire-and-forget).
+    this.gameHistoryService.archiveGame(room, 'completed').catch((err) => {
+      this.logger.error(`Failed to archive completed game ${room.id}: ${err.message}`);
+    });
 
     // If this is a permanent lobby, auto-restart.
     if (room.isPermanentLobby) {

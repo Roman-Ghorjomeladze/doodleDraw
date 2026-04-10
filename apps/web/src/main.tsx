@@ -14,6 +14,11 @@ import './styles/global.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { installTraceBuffer } from './utils/traceBuffer';
+
+// Install diagnostic interceptors before the app mounts so we capture
+// console logs / network issues from the very first render.
+installTraceBuffer();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

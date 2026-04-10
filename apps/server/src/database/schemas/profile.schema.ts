@@ -72,6 +72,19 @@ export class ProfileDoc {
   /** All anonymous persistentIds that have been merged into this account. */
   @Prop({ type: [String], default: [] })
   linkedPersistentIds!: string[];
+
+  /** Admin flag — toggled manually via Mongo shell. Default false. */
+  @Prop({ type: Boolean, default: false, index: true })
+  isAdmin!: boolean;
+
+  /**
+   * Soft-delete timestamp. `null` means the user is active. Set to a Date
+   * when an admin deletes the user; the profile is preserved so it can be
+   * restored. Login, leaderboards, search, and profile lookups all filter
+   * out accounts with a non-null `deletedAt`.
+   */
+  @Prop({ type: Date, default: null, index: true })
+  deletedAt!: Date | null;
 }
 
 export const ProfileDocSchema = SchemaFactory.createForClass(ProfileDoc);

@@ -5,6 +5,7 @@ import { Room, GameMode, Player, LobbyInfo } from '@doodledraw/shared';
 import { RoomService } from '../room.service';
 import { GameService } from '../game.service';
 import { RoomPersistenceService } from '../room-persistence.service';
+import { GameHistoryService } from '../game-history.service';
 import { createBotPlayer, removeBotState, isBotId } from './bot-player';
 
 export interface PermanentLobbyConfig {
@@ -40,6 +41,7 @@ export class PermanentLobbiesService implements OnApplicationBootstrap {
     @Inject(forwardRef(() => GameService))
     private readonly gameService: GameService,
     private readonly persistence: RoomPersistenceService,
+    private readonly gameHistoryService: GameHistoryService,
   ) {}
 
   setServer(server: Server): void {
@@ -379,6 +381,9 @@ export class PermanentLobbiesService implements OnApplicationBootstrap {
     }
 
     this.logger.log(`Destroying bot-only room ${roomId}`);
+
+    // Archive to game history before tearing down (fire-and-forget, deduped).
+    this.gameHistoryService.archiveGame(room, 'cleaned_up').catch(() => {});
 
     for (const [id, player] of room.players) {
       this.roomService.playerRoomMap.delete(id);
